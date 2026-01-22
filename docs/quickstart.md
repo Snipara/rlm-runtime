@@ -11,6 +11,9 @@ pip install rlm-runtime
 # With Docker support (recommended for production)
 pip install rlm-runtime[docker]
 
+# With MCP server (for Claude Desktop/Code)
+pip install rlm-runtime[mcp]
+
 # With Snipara context optimization
 pip install rlm-runtime[snipara]
 

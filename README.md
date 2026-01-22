@@ -77,9 +77,33 @@ RLM Runtime includes an MCP server that exposes sandboxed Python execution to Cl
 |------|-------------|
 | `execute_python` | Run Python code in a sandboxed environment |
 | `run_completion` | Execute a recursive LLM completion |
+| `set_project` | Switch to a different project (auto-loads config) |
+| `get_project` | View current project configuration |
 | `get_repl_context` | Get current REPL context variables |
 | `set_repl_context` | Set a variable in REPL context |
 | `clear_repl_context` | Clear all REPL context |
+
+### Multi-Project Support
+
+The MCP server supports working across multiple projects with different configurations:
+
+```
+~/projects/
+├── frontend/
+│   └── rlm.toml          # Frontend config (claude-sonnet, docker)
+├── backend/
+│   └── rlm.toml          # Backend config (gpt-4o, local)
+└── data-pipeline/
+    └── rlm.toml          # Data config (gpt-4o-mini)
+```
+
+Switch projects in Claude:
+```
+User: Switch to the backend project
+Claude: [set_project directory="~/projects/backend"]
+```
+
+See [MCP Integration Guide](docs/mcp-integration.md) for details.
 
 ### Example Usage in Claude
 
@@ -480,7 +504,7 @@ Get your API key at [snipara.com/dashboard](https://snipara.com/dashboard)
 
 ```bash
 # Clone
-git clone https://github.com/snipara/rlm-runtime
+git clone https://github.com/alopez3006/rlm-runtime
 cd rlm-runtime
 
 # Install dev dependencies
@@ -501,8 +525,15 @@ python -m build
 
 Apache 2.0 - See [LICENSE](LICENSE)
 
+## Documentation
+
+- [Quickstart Guide](docs/quickstart.md) - Get started in 5 minutes
+- [Architecture Guide](docs/architecture.md) - System design and components
+- [MCP Integration](docs/mcp-integration.md) - Claude Desktop/Code setup
+- [Configuration](docs/configuration.md) - All configuration options
+- [Tool Development](docs/tools.md) - Building custom tools
+
 ## Links
 
-- [Documentation](https://docs.snipara.com/rlm-runtime)
 - [Snipara](https://snipara.com) - Context optimization service
-- [GitHub Issues](https://github.com/snipara/rlm-runtime/issues)
+- [GitHub Issues](https://github.com/alopez3006/rlm-runtime/issues)

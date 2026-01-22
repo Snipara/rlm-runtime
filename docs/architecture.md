@@ -12,7 +12,9 @@ RLM Runtime is a local-first execution environment for Recursive Language Models
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  User Application                                                           │
-│  (CLI, Python script, or integration)                                       │
+│  ├── CLI (rlm run, rlm logs, etc.)                                         │
+│  ├── Python API (from rlm import RLM)                                      │
+│  └── MCP Server (Claude Desktop/Code integration)                          │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
                                   ▼
@@ -40,6 +42,12 @@ RLM Runtime is a local-first execution environment for Recursive Language Models
 │  ├── Builtin: execute_code, file_read, list_files                          │
 │  ├── Snipara: context_query, sections, search (optional plugin)            │
 │  └── Custom: user-defined tools                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  MCP Server (optional)                                                      │
+│  ├── execute_python: Sandboxed code execution for Claude                   │
+│  ├── run_completion: Recursive LLM completion                              │
+│  ├── set_project / get_project: Multi-project support                      │
+│  └── REPL context management                                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -192,6 +200,57 @@ rlm = RLM(tools=[my_tool])
 # Via registry
 rlm.tool_registry.register(my_tool)
 ```
+
+## MCP Server
+
+The MCP (Model Context Protocol) server enables Claude Desktop and Claude Code to use RLM capabilities.
+
+### Components
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Claude Desktop / Claude Code                               │
+└─────────────────────────────────┬───────────────────────────┘
+                                  │ stdio (JSON-RPC)
+                                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  MCP Server (rlm mcp-serve)                                 │
+│  ├── ProjectContext: Multi-project config management        │
+│  ├── LocalREPL: Persistent sandboxed execution             │
+│  └── Tool handlers: execute_python, run_completion, etc.   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Project Context
+
+The `ProjectContext` class manages project-specific configuration:
+
+1. **Auto-detection**: Loads `rlm.toml` from cwd on startup
+2. **Manual switching**: `set_project` tool changes active project
+3. **Snipara integration**: Routes context queries to correct project
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `execute_python` | Sandboxed Python execution (RestrictedPython) |
+| `run_completion` | Recursive LLM completion with tools |
+| `set_project` | Switch to different project/config |
+| `get_project` | View current project status |
+| `get_repl_context` | Get persistent REPL variables |
+| `set_repl_context` | Set REPL variables |
+| `clear_repl_context` | Reset REPL state |
+
+### Security Model
+
+The MCP server uses the same RestrictedPython sandbox as the Local REPL:
+
+- Import whitelist (json, re, math, datetime, etc.)
+- No file I/O, network, or system access
+- Output truncation at 100KB
+- Execution timeout (default: 30s, max: 60s)
+
+See [MCP Integration Guide](mcp-integration.md) for full documentation.
 
 ## Configuration
 
