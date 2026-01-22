@@ -258,6 +258,48 @@ def mcp_serve():
 
 
 @app.command()
+def visualize(
+    log_dir: Path = typer.Option(Path("./logs"), "--dir", "-d", help="Log directory"),
+    port: int = typer.Option(8501, "--port", "-p", help="Port to run on"),
+):
+    """Launch the trajectory visualizer web UI.
+
+    Opens an interactive Streamlit dashboard to explore RLM execution
+    trajectories, view token usage, and debug completions.
+    """
+    try:
+        import streamlit.web.cli as stcli
+        import sys
+        from rlm.visualizer import app as viz_app
+        import os
+
+        # Set log directory as environment variable for the app
+        os.environ["RLM_LOG_DIR"] = str(log_dir.absolute())
+
+        console.print(f"[green]Starting visualizer on port {port}...[/green]")
+        console.print(f"[dim]Log directory: {log_dir}[/dim]")
+        console.print()
+        console.print(f"Open http://localhost:{port} in your browser")
+        console.print("[dim]Press Ctrl+C to stop[/dim]")
+
+        sys.argv = [
+            "streamlit",
+            "run",
+            viz_app.__file__,
+            "--server.port", str(port),
+            "--server.headless", "true",
+            "--browser.gatherUsageStats", "false",
+        ]
+        sys.exit(stcli.main())
+
+    except ImportError as e:
+        console.print("[red]Error:[/red] Visualizer dependencies not installed")
+        console.print("Install with: pip install rlm-runtime[visualizer]")
+        console.print(f"Details: {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
 def doctor():
     """Check RLM runtime setup and dependencies."""
     console.print("[bold]RLM Runtime Doctor[/bold]")
@@ -281,7 +323,13 @@ def doctor():
             checks.append((f"Package: {pkg}", False, "missing"))
 
     # Check optional packages
-    optional = [("docker", "docker"), ("snipara_mcp", "snipara-mcp"), ("mcp", "mcp")]
+    optional = [
+        ("docker", "docker"),
+        ("snipara_mcp", "snipara-mcp"),
+        ("mcp", "mcp"),
+        ("streamlit", "streamlit"),
+        ("plotly", "plotly"),
+    ]
     for module, pkg in optional:
         try:
             __import__(module)

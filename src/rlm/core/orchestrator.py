@@ -424,3 +424,38 @@ class RLM:
                 content=f"Error executing {tool_call.name}: {e}",
                 is_error=True,
             )
+
+    async def stream(
+        self,
+        prompt: str,
+        system: str | None = None,
+    ):
+        """Stream a simple completion (no tool use).
+
+        This method streams tokens as they arrive from the LLM.
+        Note: Streaming does not support tool calls - use completion()
+        for tasks that require tool use.
+
+        Args:
+            prompt: The user's prompt/question
+            system: Optional system message for context
+
+        Yields:
+            str: Content chunks as they arrive
+
+        Example:
+            ```python
+            async for chunk in rlm.stream("Explain quantum computing"):
+                print(chunk, end="", flush=True)
+            ```
+        """
+        messages: list[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        if self.verbose:
+            logger.info("Starting stream", prompt_length=len(prompt))
+
+        async for chunk in self.backend.stream(messages):
+            yield chunk
