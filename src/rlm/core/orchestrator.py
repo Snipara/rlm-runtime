@@ -1,0 +1,426 @@
+"""RLM Orchestrator - the main entry point for recursive completions."""
+
+from __future__ import annotations
+
+import time
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+import structlog
+
+from rlm.core.config import RLMConfig, load_config
+from rlm.core.types import (
+    CompletionOptions,
+    Message,
+    RLMResult,
+    ToolCall,
+    ToolResult,
+    TrajectoryEvent,
+)
+
+if TYPE_CHECKING:
+    from rlm.backends.base import BaseBackend, Tool
+    from rlm.repl.base import BaseREPL
+
+logger = structlog.get_logger()
+
+
+class RLM:
+    """Recursive Language Model runtime.
+
+    The main entry point for recursive LLM completions with tool use
+    and sandboxed code execution.
+
+    Example:
+        ```python
+        from rlm import RLM
+
+        rlm = RLM(model="gpt-4o-mini", environment="docker")
+        result = await rlm.completion("Analyze data.csv")
+        print(result.response)
+        ```
+    """
+
+    def __init__(
+        self,
+        backend: str | BaseBackend = "litellm",
+        model: str = "gpt-4o-mini",
+        environment: str | BaseREPL = "local",
+        config: RLMConfig | None = None,
+        tools: list[Tool] | None = None,
+        verbose: bool = False,
+        snipara_api_key: str | None = None,
+        snipara_project_slug: str | None = None,
+    ):
+        """Initialize the RLM runtime.
+
+        Args:
+            backend: LLM backend ("litellm", "openai", "anthropic") or instance
+            model: Model name to use (e.g., "gpt-4o-mini", "claude-3-sonnet")
+            environment: REPL environment ("local", "docker") or instance
+            config: Optional RLMConfig instance
+            tools: Optional list of custom tools to register
+            verbose: Enable verbose logging
+            snipara_api_key: Snipara API key (or set SNIPARA_API_KEY env var)
+            snipara_project_slug: Snipara project slug (or set SNIPARA_PROJECT_SLUG)
+        """
+        self.config = config or load_config()
+        self.verbose = verbose or self.config.verbose
+
+        # Override config with explicit parameters
+        if snipara_api_key:
+            self.config.snipara_api_key = snipara_api_key
+        if snipara_project_slug:
+            self.config.snipara_project_slug = snipara_project_slug
+
+        # Setup backend
+        if isinstance(backend, str):
+            self.backend = self._create_backend(backend, model)
+        else:
+            self.backend = backend
+
+        # Setup REPL
+        if isinstance(environment, str):
+            self.repl = self._create_repl(environment)
+        else:
+            self.repl = environment
+
+        # Setup tools
+        from rlm.tools.registry import ToolRegistry
+
+        self.tool_registry = ToolRegistry()
+
+        # Register builtin tools
+        self._register_builtin_tools()
+
+        # Register custom tools
+        if tools:
+            for tool in tools:
+                self.tool_registry.register(tool)
+
+        # Auto-register Snipara tools if available
+        self._register_snipara_tools()
+
+        # Setup logging
+        from rlm.logging.trajectory import TrajectoryLogger
+
+        self.trajectory_logger = TrajectoryLogger(
+            log_dir=self.config.log_dir,
+            verbose=self.verbose,
+        )
+
+        if self.verbose:
+            logger.info(
+                "RLM initialized",
+                backend=backend if isinstance(backend, str) else type(backend).__name__,
+                model=model,
+                environment=environment if isinstance(environment, str) else type(environment).__name__,
+                tools_count=len(self.tool_registry),
+                snipara_enabled=self.config.snipara_enabled,
+            )
+
+    def _create_backend(self, backend: str, model: str) -> BaseBackend:
+        """Create backend from string identifier."""
+        from rlm.backends.litellm import LiteLLMBackend
+
+        if backend == "litellm":
+            return LiteLLMBackend(model=model, temperature=self.config.temperature)
+        if backend == "openai":
+            return LiteLLMBackend(model=model, temperature=self.config.temperature)
+        if backend == "anthropic":
+            return LiteLLMBackend(model=model, temperature=self.config.temperature)
+
+        raise ValueError(f"Unknown backend: {backend}. Supported: litellm, openai, anthropic")
+
+    def _create_repl(self, environment: str) -> BaseREPL:
+        """Create REPL from string identifier."""
+        from rlm.repl.local import LocalREPL
+
+        if environment == "local":
+            return LocalREPL(timeout=self.config.docker_timeout)
+
+        if environment == "docker":
+            try:
+                from rlm.repl.docker import DockerREPL
+
+                return DockerREPL(
+                    image=self.config.docker_image,
+                    cpus=self.config.docker_cpus,
+                    memory=self.config.docker_memory,
+                    timeout=self.config.docker_timeout,
+                    network_disabled=self.config.docker_network_disabled,
+                )
+            except ImportError:
+                raise ImportError(
+                    "Docker support requires 'docker' package. "
+                    "Install with: pip install rlm-runtime[docker]"
+                )
+
+        raise ValueError(f"Unknown environment: {environment}. Supported: local, docker")
+
+    def _register_builtin_tools(self) -> None:
+        """Register builtin tools."""
+        from rlm.tools.builtin import get_builtin_tools
+
+        for tool in get_builtin_tools(self.repl):
+            self.tool_registry.register(tool)
+
+    def _register_snipara_tools(self) -> None:
+        """Register Snipara tools if snipara-mcp is installed and configured."""
+        if not self.config.snipara_enabled:
+            logger.debug("Snipara not configured, skipping tool registration")
+            return
+
+        try:
+            from snipara_mcp.rlm_tools import get_snipara_tools
+
+            tools = get_snipara_tools(
+                api_key=self.config.snipara_api_key,  # type: ignore
+                project_slug=self.config.snipara_project_slug,  # type: ignore
+            )
+            for tool in tools:
+                self.tool_registry.register(tool)
+            logger.info("Snipara tools registered", count=len(tools))
+        except ImportError:
+            logger.debug(
+                "snipara-mcp not installed, skipping Snipara tools. "
+                "Install with: pip install rlm-runtime[snipara]"
+            )
+
+    async def completion(
+        self,
+        prompt: str,
+        system: str | None = None,
+        options: CompletionOptions | None = None,
+    ) -> RLMResult:
+        """Execute a recursive completion.
+
+        The LLM can call tools, execute code in the REPL, and spawn
+        sub-completions up to the configured depth limit.
+
+        Args:
+            prompt: The user's prompt/question
+            system: Optional system message for context
+            options: Completion options (limits, budgets, etc.)
+
+        Returns:
+            RLMResult with the response and execution trajectory
+
+        Example:
+            ```python
+            result = await rlm.completion(
+                "Find all TODO comments in the codebase",
+                system="You are a code analyst.",
+                options=CompletionOptions(max_depth=3),
+            )
+            print(result.response)
+            ```
+        """
+        options = options or CompletionOptions(
+            max_depth=self.config.max_depth,
+            max_subcalls=self.config.max_subcalls,
+            token_budget=self.config.token_budget,
+            tool_budget=self.config.tool_budget,
+            timeout_seconds=self.config.timeout_seconds,
+        )
+
+        trajectory_id = uuid4()
+        start_time = time.time()
+        events: list[TrajectoryEvent] = []
+
+        # Build initial messages
+        messages: list[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        if self.verbose:
+            logger.info(
+                "Starting completion",
+                trajectory_id=str(trajectory_id),
+                prompt_length=len(prompt),
+            )
+
+        # Execute recursive completion
+        try:
+            response, events = await self._recursive_complete(
+                messages=messages,
+                trajectory_id=trajectory_id,
+                parent_call_id=None,
+                depth=0,
+                options=options,
+                events=events,
+            )
+        except Exception as e:
+            logger.error("Completion failed", error=str(e), trajectory_id=str(trajectory_id))
+            events.append(
+                TrajectoryEvent(
+                    trajectory_id=trajectory_id,
+                    call_id=uuid4(),
+                    parent_call_id=None,
+                    depth=0,
+                    prompt=prompt,
+                    error=str(e),
+                )
+            )
+            response = f"Error: {e}"
+
+        # Calculate totals
+        total_tokens = sum(e.input_tokens + e.output_tokens for e in events)
+        total_tool_calls = sum(len(e.tool_calls) for e in events)
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # Log trajectory
+        self.trajectory_logger.log_trajectory(trajectory_id, events)
+
+        if self.verbose:
+            logger.info(
+                "Completion finished",
+                trajectory_id=str(trajectory_id),
+                total_calls=len(events),
+                total_tokens=total_tokens,
+                duration_ms=duration_ms,
+            )
+
+        return RLMResult(
+            response=response,
+            trajectory_id=trajectory_id,
+            total_calls=len(events),
+            total_tokens=total_tokens,
+            total_tool_calls=total_tool_calls,
+            duration_ms=duration_ms,
+            events=events if options.include_trajectory else [],
+        )
+
+    async def _recursive_complete(
+        self,
+        messages: list[Message],
+        trajectory_id: UUID,
+        parent_call_id: UUID | None,
+        depth: int,
+        options: CompletionOptions,
+        events: list[TrajectoryEvent],
+    ) -> tuple[str, list[TrajectoryEvent]]:
+        """Internal recursive completion loop."""
+        call_id = uuid4()
+
+        # Check depth limit
+        if depth >= options.max_depth:
+            raise RuntimeError(f"Max recursion depth ({options.max_depth}) exceeded")
+
+        # Check subcall limit
+        if len(events) >= options.max_subcalls:
+            raise RuntimeError(f"Max subcalls ({options.max_subcalls}) exceeded")
+
+        # Get available tools
+        tools = self.tool_registry.get_all()
+
+        # Call backend
+        start_time = time.time()
+        response = await self.backend.complete(messages, tools=tools)
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # Create event
+        event = TrajectoryEvent(
+            trajectory_id=trajectory_id,
+            call_id=call_id,
+            parent_call_id=parent_call_id,
+            depth=depth,
+            prompt=messages[-1].content,
+            response=response.content,
+            tool_calls=response.tool_calls,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+            duration_ms=duration_ms,
+        )
+
+        # Handle tool calls
+        if response.tool_calls:
+            tool_results: list[ToolResult] = []
+
+            for tool_call in response.tool_calls:
+                # Check tool budget
+                total_tool_calls = sum(len(e.tool_calls) for e in events) + len(tool_results)
+                if total_tool_calls >= options.tool_budget:
+                    tool_results.append(
+                        ToolResult(
+                            tool_call_id=tool_call.id,
+                            content="Error: Tool budget exceeded",
+                            is_error=True,
+                        )
+                    )
+                    continue
+
+                # Execute tool
+                result = await self._execute_tool(tool_call)
+                tool_results.append(result)
+
+                if self.verbose:
+                    logger.debug(
+                        "Tool executed",
+                        tool=tool_call.name,
+                        is_error=result.is_error,
+                    )
+
+            event.tool_results = tool_results
+            events.append(event)
+
+            # Add assistant message with tool calls
+            messages.append(
+                Message(
+                    role="assistant",
+                    content=response.content or "",
+                    tool_calls=response.tool_calls,
+                )
+            )
+
+            # Add tool results
+            for result in tool_results:
+                messages.append(
+                    Message(
+                        role="tool",
+                        content=result.content,
+                        tool_call_id=result.tool_call_id,
+                    )
+                )
+
+            # Recurse
+            return await self._recursive_complete(
+                messages=messages,
+                trajectory_id=trajectory_id,
+                parent_call_id=call_id,
+                depth=depth + 1,
+                options=options,
+                events=events,
+            )
+
+        # No tool calls - we're done
+        events.append(event)
+        return response.content or "", events
+
+    async def _execute_tool(self, tool_call: ToolCall) -> ToolResult:
+        """Execute a tool call."""
+        try:
+            tool = self.tool_registry.get(tool_call.name)
+            if tool is None:
+                return ToolResult(
+                    tool_call_id=tool_call.id,
+                    content=f"Error: Unknown tool '{tool_call.name}'",
+                    is_error=True,
+                )
+
+            # Execute tool handler
+            result = await tool.execute(**tool_call.arguments)
+
+            return ToolResult(
+                tool_call_id=tool_call.id,
+                content=str(result),
+            )
+
+        except Exception as e:
+            logger.error("Tool execution failed", tool=tool_call.name, error=str(e))
+            return ToolResult(
+                tool_call_id=tool_call.id,
+                content=f"Error executing {tool_call.name}: {e}",
+                is_error=True,
+            )

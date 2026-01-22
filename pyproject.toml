@@ -1,0 +1,79 @@
+[project]
+name = "rlm-runtime"
+version = "0.1.0"
+description = "Recursive Language Model runtime with sandboxed REPL execution"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Snipara", email = "hello@snipara.com" }]
+keywords = ["llm", "ai", "recursive", "repl", "agents", "mcp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "litellm>=1.50.0",
+    "RestrictedPython>=7.1",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "structlog>=24.1.0",
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "anyio>=4.2.0",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+docker = ["docker>=7.0.0"]
+snipara = ["snipara-mcp>=1.3.0"]
+visualizer = ["streamlit>=1.30.0", "plotly>=5.18.0"]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+]
+all = ["rlm-runtime[docker,snipara,visualizer,dev]"]
+
+[project.scripts]
+rlm = "rlm.cli.main:app"
+
+[project.entry-points."rlm.tools"]
+builtin = "rlm.tools.builtin:register"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rlm"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+packages = ["rlm"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --cov=rlm --cov-report=term-missing"

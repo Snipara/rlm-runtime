@@ -1,0 +1,38 @@
+# Docker Compose for RLM Runtime Development
+
+version: '3.8'
+
+services:
+  rlm-repl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rlm-repl
+    volumes:
+      - ../:/workspace:ro
+    working_dir: /workspace
+    network_mode: none
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    stdin_open: true
+    tty: true
+
+  # Development container with full access
+  rlm-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rlm-dev
+    volumes:
+      - ../:/workspace
+    working_dir: /workspace
+    environment:
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - SNIPARA_API_KEY
+      - SNIPARA_PROJECT_SLUG
+    stdin_open: true
+    tty: true
