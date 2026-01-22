@@ -220,6 +220,43 @@ def version():
     console.print(f"rlm-runtime {__version__}")
 
 
+@app.command("mcp-serve")
+def mcp_serve():
+    """Start the MCP server for Claude Desktop/Code integration.
+
+    This runs the RLM MCP server using stdio transport. Configure it in your
+    Claude settings:
+
+    For Claude Desktop (~/.claude/claude_desktop_config.json):
+    {
+      "mcpServers": {
+        "rlm": {
+          "command": "rlm",
+          "args": ["mcp-serve"]
+        }
+      }
+    }
+
+    For Claude Code (~/.claude/claude_code_config.json):
+    {
+      "mcpServers": {
+        "rlm": {
+          "command": "rlm",
+          "args": ["mcp-serve"]
+        }
+      }
+    }
+    """
+    try:
+        from rlm.mcp import run_server
+        run_server()
+    except ImportError as e:
+        console.print(f"[red]Error:[/red] MCP dependencies not installed")
+        console.print("Install with: pip install rlm-runtime[mcp]")
+        console.print(f"Details: {e}")
+        raise typer.Exit(1)
+
+
 @app.command()
 def doctor():
     """Check RLM runtime setup and dependencies."""
@@ -244,7 +281,7 @@ def doctor():
             checks.append((f"Package: {pkg}", False, "missing"))
 
     # Check optional packages
-    optional = [("docker", "docker"), ("snipara_mcp", "snipara-mcp")]
+    optional = [("docker", "docker"), ("snipara_mcp", "snipara-mcp"), ("mcp", "mcp")]
     for module, pkg in optional:
         try:
             __import__(module)

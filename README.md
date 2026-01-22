@@ -22,11 +22,87 @@ pip install rlm-runtime
 # With Docker support (recommended)
 pip install rlm-runtime[docker]
 
+# With MCP server (for Claude Desktop/Code)
+pip install rlm-runtime[mcp]
+
 # With Snipara context optimization
 pip install rlm-runtime[snipara]
 
 # Full install
 pip install rlm-runtime[all]
+```
+
+## Claude Desktop / Claude Code Integration
+
+RLM Runtime includes an MCP server that exposes sandboxed Python execution to Claude.
+
+### Setup
+
+1. Install with MCP support:
+   ```bash
+   pip install rlm-runtime[mcp]
+   ```
+
+2. Add to your Claude configuration:
+
+   **Claude Desktop** (`~/.claude/claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "rlm": {
+         "command": "rlm",
+         "args": ["mcp-serve"]
+       }
+     }
+   }
+   ```
+
+   **Claude Code** (`~/.claude/claude_code_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "rlm": {
+         "command": "rlm",
+         "args": ["mcp-serve"]
+       }
+     }
+   }
+   ```
+
+3. Restart Claude Desktop or reload Claude Code.
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `execute_python` | Run Python code in a sandboxed environment |
+| `run_completion` | Execute a recursive LLM completion |
+| `get_repl_context` | Get current REPL context variables |
+| `set_repl_context` | Set a variable in REPL context |
+| `clear_repl_context` | Clear all REPL context |
+
+### Example Usage in Claude
+
+Once configured, Claude can use these tools:
+
+```
+User: Calculate the fibonacci sequence up to n=20
+
+Claude: I'll use the execute_python tool to calculate this.
+
+[execute_python]
+def fib(n):
+    a, b = 0, 1
+    result = []
+    while a <= n:
+        result.append(a)
+        a, b = b, a + b
+    return result
+
+result = fib(20)
+print(result)
+
+Output: [0, 1, 1, 2, 3, 5, 8, 13]
 ```
 
 ## Quick Start
