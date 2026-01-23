@@ -37,7 +37,22 @@ pip install rlm-runtime[all]
 
 ## Claude Desktop / Claude Code Integration
 
-RLM Runtime includes an MCP server that exposes sandboxed Python execution to Claude.
+RLM Runtime includes an MCP server that provides **sandboxed Python execution** to Claude. **Zero API keys required** - designed to work within Claude Code's billing.
+
+### Architecture
+
+```
+Claude Code (LLM + billing included)
+    │
+    ├── rlm-runtime-mcp (code sandbox - no API keys)
+    │   ├── execute_python
+    │   ├── get_repl_context
+    │   ├── set_repl_context
+    │   └── clear_repl_context
+    │
+    └── snipara-mcp (optional, OAuth auth)
+        └── search_context
+```
 
 ### Setup
 
@@ -60,7 +75,7 @@ RLM Runtime includes an MCP server that exposes sandboxed Python execution to Cl
    }
    ```
 
-   **Claude Code** (`~/.claude/claude_code_config.json`):
+   **Claude Code** (via MCP settings):
    ```json
    {
      "mcpServers": {
@@ -79,38 +94,41 @@ RLM Runtime includes an MCP server that exposes sandboxed Python execution to Cl
 | Tool | Description |
 |------|-------------|
 | `execute_python` | Run Python code in a sandboxed environment |
-| `run_completion` | Execute a recursive LLM completion |
-| `set_project` | Switch to a different project (auto-loads config) |
-| `get_project` | View current project configuration |
 | `get_repl_context` | Get current REPL context variables |
 | `set_repl_context` | Set a variable in REPL context |
 | `clear_repl_context` | Clear all REPL context |
 
-### Multi-Project Support
+### With Snipara (Optional)
 
-The MCP server supports working across multiple projects with different configurations:
+For context retrieval, add snipara-mcp alongside rlm-runtime:
 
-```
-~/projects/
-├── frontend/
-│   └── rlm.toml          # Frontend config (claude-sonnet, docker)
-├── backend/
-│   └── rlm.toml          # Backend config (gpt-4o, local)
-└── data-pipeline/
-    └── rlm.toml          # Data config (gpt-4o-mini)
+```json
+{
+  "mcpServers": {
+    "rlm": {
+      "command": "rlm",
+      "args": ["mcp-serve"]
+    },
+    "snipara": {
+      "command": "snipara-mcp-server"
+    }
+  }
+}
 ```
 
-Switch projects in Claude:
-```
-User: Switch to the backend project
-Claude: [set_project directory="~/projects/backend"]
+Authenticate with OAuth (no API key copying):
+
+```bash
+pip install snipara-mcp
+snipara-mcp-login      # Opens browser for authentication
+snipara-mcp-status     # Check auth status
 ```
 
 See [MCP Integration Guide](docs/mcp-integration.md) for details.
 
 ### Example Usage in Claude
 
-Once configured, Claude can use these tools:
+Once configured, Claude can execute Python in a secure sandbox:
 
 ```
 User: Calculate the fibonacci sequence up to n=20
