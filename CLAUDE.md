@@ -412,6 +412,81 @@ For this project (rlm-runtime), Snipara is configured with:
 - Better ranking of highly relevant vs tangentially relevant content
 - Improved query decomposition for complex questions
 
+## CI/CD: Git to PyPI Deployment
+
+The project uses **GitHub Actions** for automatic PyPI deployment when pushing to the main branch.
+
+### Automatic Deployment Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Developer Workflow                                             │
+│                                                                 │
+│  1. Make changes to code                                        │
+│  2. Run tests locally: pytest tests/                            │
+│  3. Commit changes: git commit -m "..."                         │
+│  4. Push to main: git push origin master                        │
+│                                                                 │
+│  ↓ GitHub Actions triggers automatically                        │
+│                                                                 │
+│  5. CI runs tests                                               │
+│  6. CI builds package: python -m build                          │
+│  7. CI uploads to PyPI: twine upload dist/*                     │
+│  8. Package available: pip install rlm-runtime                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Manual Release Steps (if needed)
+
+```bash
+# 1. Bump version in pyproject.toml
+# version = "0.2.1"
+
+# 2. Commit version bump
+git add pyproject.toml
+git commit -m "Bump version to 0.2.1"
+
+# 3. Push to trigger CI/CD
+git push origin master
+
+# 4. (Optional) Create git tag
+git tag v0.2.1
+git push origin v0.2.1
+```
+
+### Local Build & Test (before push)
+
+```bash
+# Run tests
+pytest tests/ -v
+
+# Build locally to verify
+python -m build
+
+# Check built files
+ls dist/
+# rlm_runtime-0.2.0-py3-none-any.whl
+# rlm_runtime-0.2.0.tar.gz
+
+# (Optional) Test install locally
+pip install dist/rlm_runtime-0.2.0-py3-none-any.whl
+```
+
+### PyPI Package Info
+
+- **Package Name:** `rlm-runtime`
+- **PyPI URL:** https://pypi.org/project/rlm-runtime/
+- **Install:** `pip install rlm-runtime`
+- **With MCP:** `pip install rlm-runtime[mcp]`
+- **All extras:** `pip install rlm-runtime[all]`
+
+### Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.2.0 | Jan 2025 | Cost tracking, budget enforcement, resource monitoring |
+| 0.1.x | Dec 2024 | Initial release with MCP server |
+
 ## Recent Changes
 
 - **Cost Tracking**: New pricing.py module with model pricing data for OpenAI, Anthropic, Google, and Mistral models. RLMResult now includes `total_cost_usd`, `total_input_tokens`, `total_output_tokens`.
