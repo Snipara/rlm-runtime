@@ -1,6 +1,6 @@
 [project]
 name = "rlm-runtime"
-version = "0.1.0"
+version = "0.2.0"
 description = "Recursive Language Model runtime with sandboxed REPL execution"
 readme = "README.md"
 license = { text = "Apache-2.0" }
