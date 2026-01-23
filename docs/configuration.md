@@ -206,10 +206,7 @@ Create `rlm.toml` in each project directory:
     └── rlm.toml     # model = "claude-sonnet-4-20250514", max_depth = 8
 ```
 
-When using the MCP server, switch projects with:
-```
-set_project(directory="/path/to/project")
-```
+Each project uses its own `rlm.toml` configuration. The CLI automatically detects the config from the current directory.
 
 ## Model Selection Guide
 

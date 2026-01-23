@@ -18,7 +18,7 @@ Core functionality for recursive LLM completions with sandboxed execution.
 | CLI | ✅ | `rlm run`, `rlm init`, `rlm logs`, `rlm doctor` |
 | Snipara Integration | ✅ | Context optimization tools |
 | MCP Server | ✅ | Claude Desktop/Code integration |
-| Multi-Project Support | ✅ | Project switching via `set_project` |
+| Multi-Project Support | ✅ | Per-project `rlm.toml` configuration |
 
 ---
 

@@ -49,11 +49,10 @@ RLM Runtime is a local-first execution environment for Recursive Language Models
 │  ├── Snipara: context_query, sections, search (optional plugin)            │
 │  └── Custom: user-defined tools                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  MCP Server (optional)                                                      │
-│  ├── execute_python: Sandboxed code execution for Claude                   │
-│  ├── run_completion: Recursive LLM completion                              │
-│  ├── set_project / get_project: Multi-project support                      │
-│  └── REPL context management                                               │
+│  MCP Server (zero API keys, for Claude Code)                               │
+│  ├── execute_python: Sandboxed code execution                              │
+│  ├── get_repl_context / set_repl_context: Persistent state                 │
+│  └── clear_repl_context: Reset execution context                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -264,10 +263,9 @@ The MCP (Model Context Protocol) server enables Claude Desktop and Claude Code t
                                   │ stdio (JSON-RPC)
                                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  MCP Server (rlm mcp-serve)                                 │
-│  ├── ProjectContext: Multi-project config management        │
+│  MCP Server (rlm mcp-serve) - Zero API keys                 │
 │  ├── LocalREPL: Persistent sandboxed execution             │
-│  └── Tool handlers: execute_python, run_completion, etc.   │
+│  └── Tools: execute_python, get/set/clear_repl_context     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -311,25 +309,18 @@ except MaxDepthExceeded as e:
     print(f"Recursion limit: depth={e.depth}, max={e.max_depth}")
 ```
 
-### Project Context
+### Available MCP Tools
 
-The `ProjectContext` class manages project-specific configuration:
-
-1. **Auto-detection**: Loads `rlm.toml` from cwd on startup
-2. **Manual switching**: `set_project` tool changes active project
-3. **Snipara integration**: Routes context queries to correct project
-
-### Available Tools
+The MCP server provides sandboxed code execution for Claude Code (zero API keys required):
 
 | Tool | Description |
 |------|-------------|
 | `execute_python` | Sandboxed Python execution (RestrictedPython) |
-| `run_completion` | Recursive LLM completion with tools |
-| `set_project` | Switch to different project/config |
-| `get_project` | View current project status |
 | `get_repl_context` | Get persistent REPL variables |
 | `set_repl_context` | Set REPL variables |
 | `clear_repl_context` | Reset REPL state |
+
+For context retrieval, use **snipara-mcp** separately (with OAuth authentication).
 
 ### Security Model
 
