@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -71,7 +71,7 @@ def get_snipara_token(project_id: str | None = None) -> dict[str, Any] | None:
     if expires_at:
         try:
             exp_time = datetime.fromisoformat(expires_at)
-            if exp_time < datetime.utcnow():
+            if exp_time < datetime.now(timezone.utc):
                 # Token expired - try using snipara_mcp to refresh if available
                 refreshed = _try_refresh_token(token_data.get("refresh_token"))
                 if refreshed:
@@ -165,11 +165,11 @@ def get_auth_status() -> dict[str, Any]:
         if expires_at:
             try:
                 exp_time = datetime.fromisoformat(expires_at)
-                if exp_time < datetime.utcnow():
+                if exp_time < datetime.now(timezone.utc):
                     project_info["valid"] = False
                     project_info["status"] = "expired"
                 else:
-                    remaining = (exp_time - datetime.utcnow()).total_seconds()
+                    remaining = (exp_time - datetime.now(timezone.utc)).total_seconds()
                     project_info["expires_in_minutes"] = int(remaining / 60)
                     project_info["status"] = "valid"
             except (ValueError, TypeError):
