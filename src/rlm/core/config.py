@@ -194,7 +194,7 @@ def save_config(config: RLMConfig, config_path: Path) -> None:
         "",
         "# Security: File access restrictions",
         "# Paths that file tools can access. Empty list means current directory only.",
-        f'allowed_paths = {[str(p) for p in config.allowed_paths]}',
+        f"allowed_paths = {[str(p) for p in config.allowed_paths]}",
         "",
         "# Snipara integration (optional)",
         "# Get your API key at https://snipara.com/dashboard",

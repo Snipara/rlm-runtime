@@ -4,109 +4,113 @@ from __future__ import annotations
 
 # Allowed imports in sandboxed execution
 # These are safe standard library modules
-ALLOWED_IMPORTS: frozenset[str] = frozenset({
-    # Core utilities
-    "json",
-    "re",
-    "math",
-    "datetime",
-    "time",
-    "uuid",
-    "hashlib",
-    "base64",
-    "string",
-    "textwrap",
-    # Collections and iteration
-    "collections",
-    "itertools",
-    "functools",
-    "operator",
-    # Data structures
-    "dataclasses",
-    "typing",
-    "enum",
-    "copy",
-    # Parsing
-    "csv",
-    "statistics",
-    "decimal",
-    "fractions",
-    # Path operations (read-only)
-    "pathlib",
-    "posixpath",
-    "ntpath",
-    # URL parsing (no requests)
-    "urllib.parse",
-    # Text processing
-    "difflib",
-    "unicodedata",
-})
+ALLOWED_IMPORTS: frozenset[str] = frozenset(
+    {
+        # Core utilities
+        "json",
+        "re",
+        "math",
+        "datetime",
+        "time",
+        "uuid",
+        "hashlib",
+        "base64",
+        "string",
+        "textwrap",
+        # Collections and iteration
+        "collections",
+        "itertools",
+        "functools",
+        "operator",
+        # Data structures
+        "dataclasses",
+        "typing",
+        "enum",
+        "copy",
+        # Parsing
+        "csv",
+        "statistics",
+        "decimal",
+        "fractions",
+        # Path operations (read-only)
+        "pathlib",
+        "posixpath",
+        "ntpath",
+        # URL parsing (no requests)
+        "urllib.parse",
+        # Text processing
+        "difflib",
+        "unicodedata",
+    }
+)
 
 # Explicitly blocked - dangerous or can escape sandbox
-BLOCKED_IMPORTS: frozenset[str] = frozenset({
-    # System access
-    "os",
-    "sys",
-    "subprocess",
-    "shutil",
-    "platform",
-    "signal",
-    "resource",
-    # Network access
-    "socket",
-    "ssl",
-    "requests",
-    "urllib.request",
-    "urllib.error",
-    "http",
-    "http.client",
-    "http.server",
-    "ftplib",
-    "smtplib",
-    "poplib",
-    "imaplib",
-    "telnetlib",
-    # Serialization (can execute arbitrary code)
-    "pickle",
-    "shelve",
-    "marshal",
-    # Database
-    "sqlite3",
-    # Low-level
-    "ctypes",
-    "cffi",
-    "mmap",
-    # Concurrency (can escape sandbox)
-    "multiprocessing",
-    "threading",
-    "concurrent",
-    "asyncio",
-    # Code execution
-    "importlib",
-    "builtins",
-    "__builtins__",
-    "eval",
-    "exec",
-    "compile",
-    "code",
-    "codeop",
-    # File operations beyond basic
-    "tempfile",
-    "fileinput",
-    "glob",
-    "fnmatch",
-    # Debugging
-    "pdb",
-    "bdb",
-    "trace",
-    "traceback",
-    # Other dangerous
-    "atexit",
-    "gc",
-    "inspect",
-    "dis",
-    "ast",
-})
+BLOCKED_IMPORTS: frozenset[str] = frozenset(
+    {
+        # System access
+        "os",
+        "sys",
+        "subprocess",
+        "shutil",
+        "platform",
+        "signal",
+        "resource",
+        # Network access
+        "socket",
+        "ssl",
+        "requests",
+        "urllib.request",
+        "urllib.error",
+        "http",
+        "http.client",
+        "http.server",
+        "ftplib",
+        "smtplib",
+        "poplib",
+        "imaplib",
+        "telnetlib",
+        # Serialization (can execute arbitrary code)
+        "pickle",
+        "shelve",
+        "marshal",
+        # Database
+        "sqlite3",
+        # Low-level
+        "ctypes",
+        "cffi",
+        "mmap",
+        # Concurrency (can escape sandbox)
+        "multiprocessing",
+        "threading",
+        "concurrent",
+        "asyncio",
+        # Code execution
+        "importlib",
+        "builtins",
+        "__builtins__",
+        "eval",
+        "exec",
+        "compile",
+        "code",
+        "codeop",
+        # File operations beyond basic
+        "tempfile",
+        "fileinput",
+        "glob",
+        "fnmatch",
+        # Debugging
+        "pdb",
+        "bdb",
+        "trace",
+        "traceback",
+        # Other dangerous
+        "atexit",
+        "gc",
+        "inspect",
+        "dis",
+        "ast",
+    }
+)
 
 
 def is_import_allowed(module_name: str) -> bool:

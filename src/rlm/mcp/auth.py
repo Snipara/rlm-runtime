@@ -101,6 +101,7 @@ def _try_refresh_token(refresh_token: str | None) -> dict[str, Any] | None:
         import asyncio
 
         from snipara_mcp.auth import refresh_access_token
+
         return asyncio.run(refresh_access_token(refresh_token))
     except ImportError:
         # snipara_mcp not installed, can't refresh

@@ -126,7 +126,9 @@ class RLM:
                 "RLM initialized",
                 backend=backend if isinstance(backend, str) else type(backend).__name__,
                 model=model,
-                environment=environment if isinstance(environment, str) else type(environment).__name__,
+                environment=environment
+                if isinstance(environment, str)
+                else type(environment).__name__,
                 tools_count=len(self.tool_registry),
                 snipara_enabled=self.config.snipara_enabled,
             )

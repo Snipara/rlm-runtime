@@ -97,7 +97,7 @@ class DockerREPL(BaseREPL):
         """Create the Python script to run in the container."""
         context_json = json.dumps(self._context)
 
-        return f'''
+        return f"""
 import json
 import sys
 
@@ -127,7 +127,7 @@ if output:
     print(output, end="")
 if result is not None:
     print(f"result = {{result!r}}")
-'''
+"""
 
     def _indent_code(self, code: str, spaces: int = 4) -> str:
         """Indent code for inclusion in the script."""
@@ -152,9 +152,7 @@ if result is not None:
 
         # Create temporary script file
         script_content = self._create_script(code)
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(script_content)
             script_path = Path(f.name)
 
@@ -188,9 +186,7 @@ if result is not None:
                     timeout=timeout,
                 )
 
-                execution_time_ms = int(
-                    (asyncio.get_event_loop().time() - start_time) * 1000
-                )
+                execution_time_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 output_str = output.decode("utf-8") if isinstance(output, bytes) else str(output)
                 output_str, truncated = truncate_output(output_str)
 
@@ -202,9 +198,7 @@ if result is not None:
                 )
 
             except ContainerError as e:
-                execution_time_ms = int(
-                    (asyncio.get_event_loop().time() - start_time) * 1000
-                )
+                execution_time_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 stderr = e.stderr.decode("utf-8") if e.stderr else str(e)
                 return REPLResult(
                     output="",
@@ -236,9 +230,7 @@ if result is not None:
         try:
             json.dumps({key: value})
         except (TypeError, ValueError) as e:
-            raise ValueError(
-                f"Context value must be JSON-serializable: {e}"
-            ) from e
+            raise ValueError(f"Context value must be JSON-serializable: {e}") from e
 
         self._context[key] = value
 

@@ -185,7 +185,9 @@ class TrajectoryLogger:
             output_tokens=data.get("output_tokens", 0),
             duration_ms=data.get("duration_ms", 0),
             error=data.get("error"),
-            timestamp=datetime.fromisoformat(data["timestamp"]) if data.get("timestamp") else datetime.utcnow(),
+            timestamp=datetime.fromisoformat(data["timestamp"])
+            if data.get("timestamp")
+            else datetime.utcnow(),
         )
 
     def list_recent(self, limit: int = 10) -> list[dict[str, Any]]:
@@ -212,14 +214,16 @@ class TrajectoryLogger:
                     if first_line:
                         data = json.loads(first_line)
                         if data.get("_type") == "trajectory_metadata":
-                            summaries.append({
-                                "id": data["trajectory_id"],
-                                "timestamp": data["timestamp"],
-                                "calls": data["event_count"],
-                                "tokens": data["total_tokens"],
-                                "duration_ms": data["total_duration_ms"],
-                                "path": str(log_path),
-                            })
+                            summaries.append(
+                                {
+                                    "id": data["trajectory_id"],
+                                    "timestamp": data["timestamp"],
+                                    "calls": data["event_count"],
+                                    "tokens": data["total_tokens"],
+                                    "duration_ms": data["total_duration_ms"],
+                                    "path": str(log_path),
+                                }
+                            )
             except (json.JSONDecodeError, KeyError):
                 # Skip malformed files
                 continue

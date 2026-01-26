@@ -41,14 +41,16 @@ def list_trajectories(log_dir: Path) -> list[dict[str, Any]]:
                 if first_line:
                     data = json.loads(first_line)
                     if data.get("_type") == "trajectory_metadata":
-                        trajectories.append({
-                            "id": data["trajectory_id"],
-                            "timestamp": data["timestamp"],
-                            "calls": data["event_count"],
-                            "tokens": data["total_tokens"],
-                            "duration_ms": data["total_duration_ms"],
-                            "path": str(log_path),
-                        })
+                        trajectories.append(
+                            {
+                                "id": data["trajectory_id"],
+                                "timestamp": data["timestamp"],
+                                "calls": data["event_count"],
+                                "tokens": data["total_tokens"],
+                                "duration_ms": data["total_duration_ms"],
+                                "path": str(log_path),
+                            }
+                        )
         except (json.JSONDecodeError, KeyError):
             continue
 
@@ -71,16 +73,18 @@ def render_event_tree(events: list[dict[str, Any]]) -> go.Figure:
         depth = event["depth"]
 
         node_map[call_id] = i
-        nodes.append({
-            "id": call_id,
-            "depth": depth,
-            "index": i,
-            "label": f"Call {i+1}",
-            "tokens": event.get("input_tokens", 0) + event.get("output_tokens", 0),
-            "duration": event.get("duration_ms", 0),
-            "tool_calls": len(event.get("tool_calls", [])),
-            "has_error": event.get("error") is not None,
-        })
+        nodes.append(
+            {
+                "id": call_id,
+                "depth": depth,
+                "index": i,
+                "label": f"Call {i + 1}",
+                "tokens": event.get("input_tokens", 0) + event.get("output_tokens", 0),
+                "duration": event.get("duration_ms", 0),
+                "tool_calls": len(event.get("tool_calls", [])),
+                "has_error": event.get("error") is not None,
+            }
+        )
 
         if parent_id and parent_id in node_map:
             edges.append((node_map[parent_id], i))
@@ -103,36 +107,40 @@ def render_event_tree(events: list[dict[str, Any]]) -> go.Figure:
     for parent_idx, child_idx in edges:
         x0, y0 = positions[parent_idx]
         x1, y1 = positions[child_idx]
-        fig.add_trace(go.Scatter(
-            x=[x0, x1],
-            y=[y0, y1],
-            mode="lines",
-            line=dict(color="#888", width=1),
-            hoverinfo="none",
-            showlegend=False,
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=[x0, x1],
+                y=[y0, y1],
+                mode="lines",
+                line=dict(color="#888", width=1),
+                hoverinfo="none",
+                showlegend=False,
+            )
+        )
 
     # Add nodes
     colors = ["#ff6b6b" if n["has_error"] else "#4ecdc4" for n in nodes]
     sizes = [max(20, min(50, n["tokens"] / 100)) for n in nodes]
 
-    fig.add_trace(go.Scatter(
-        x=[p[0] for p in positions],
-        y=[p[1] for p in positions],
-        mode="markers+text",
-        marker=dict(size=sizes, color=colors, line=dict(width=2, color="white")),
-        text=[n["label"] for n in nodes],
-        textposition="top center",
-        hovertemplate=(
-            "<b>%{text}</b><br>"
-            "Tokens: %{customdata[0]}<br>"
-            "Duration: %{customdata[1]}ms<br>"
-            "Tool calls: %{customdata[2]}<br>"
-            "<extra></extra>"
-        ),
-        customdata=[[n["tokens"], n["duration"], n["tool_calls"]] for n in nodes],
-        showlegend=False,
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[p[0] for p in positions],
+            y=[p[1] for p in positions],
+            mode="markers+text",
+            marker=dict(size=sizes, color=colors, line=dict(width=2, color="white")),
+            text=[n["label"] for n in nodes],
+            textposition="top center",
+            hovertemplate=(
+                "<b>%{text}</b><br>"
+                "Tokens: %{customdata[0]}<br>"
+                "Duration: %{customdata[1]}ms<br>"
+                "Tool calls: %{customdata[2]}<br>"
+                "<extra></extra>"
+            ),
+            customdata=[[n["tokens"], n["duration"], n["tool_calls"]] for n in nodes],
+            showlegend=False,
+        )
+    )
 
     fig.update_layout(
         title="Execution Tree",
@@ -157,19 +165,23 @@ def render_token_chart(events: list[dict[str, Any]]) -> go.Figure:
 
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        x=calls,
-        y=input_tokens,
-        name="Input Tokens",
-        marker_color="#3498db",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=calls,
+            y=input_tokens,
+            name="Input Tokens",
+            marker_color="#3498db",
+        )
+    )
 
-    fig.add_trace(go.Bar(
-        x=calls,
-        y=output_tokens,
-        name="Output Tokens",
-        marker_color="#2ecc71",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=calls,
+            y=output_tokens,
+            name="Output Tokens",
+            marker_color="#2ecc71",
+        )
+    )
 
     fig.update_layout(
         title="Token Usage per Call",
@@ -193,12 +205,14 @@ def render_duration_chart(events: list[dict[str, Any]]) -> go.Figure:
 
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        x=calls,
-        y=durations,
-        name="Duration",
-        marker_color="#9b59b6",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=calls,
+            y=durations,
+            name="Duration",
+            marker_color="#9b59b6",
+        )
+    )
 
     fig.update_layout(
         title="Duration per Call (ms)",
@@ -329,11 +343,17 @@ def main() -> None:
         with col1:
             st.metric("Total Calls", len(events))
         with col2:
-            st.metric("Total Tokens", metadata["total_tokens"] if metadata else sum(
-                e.get("input_tokens", 0) + e.get("output_tokens", 0) for e in events
-            ))
+            st.metric(
+                "Total Tokens",
+                metadata["total_tokens"]
+                if metadata
+                else sum(e.get("input_tokens", 0) + e.get("output_tokens", 0) for e in events),
+            )
         with col3:
-            st.metric("Total Duration", f"{metadata['total_duration_ms'] if metadata else sum(e.get('duration_ms', 0) for e in events)}ms")
+            st.metric(
+                "Total Duration",
+                f"{metadata['total_duration_ms'] if metadata else sum(e.get('duration_ms', 0) for e in events)}ms",
+            )
         with col4:
             errors = sum(1 for e in events if e.get("error"))
             st.metric("Errors", errors)

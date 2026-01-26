@@ -410,9 +410,7 @@ async def _list_sessions(sessions: SessionManager) -> CallToolResult:
     )
 
 
-async def _destroy_session(
-    sessions: SessionManager, arguments: dict[str, Any]
-) -> CallToolResult:
+async def _destroy_session(sessions: SessionManager, arguments: dict[str, Any]) -> CallToolResult:
     """Destroy a session."""
     session_id = arguments.get("session_id", "")
 

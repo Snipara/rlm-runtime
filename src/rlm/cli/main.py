@@ -67,6 +67,7 @@ def run(
 
     if json_output:
         import json
+
         console.print(json.dumps(result.to_dict(), indent=2))
     else:
         console.print(Panel(result.response, title="Response", border_style="green"))
@@ -99,7 +100,7 @@ def init(
         console.print("Use --force to overwrite")
         raise typer.Exit(1)
 
-    config_content = '''# RLM Runtime Configuration
+    config_content = """# RLM Runtime Configuration
 
 [rlm]
 backend = "litellm"
@@ -114,15 +115,15 @@ verbose = false
 docker_image = "python:3.11-slim"
 docker_cpus = 1.0
 docker_memory = "512m"
-'''
+"""
 
     if not no_snipara:
-        config_content += '''
+        config_content += """
 # Snipara context optimization (recommended)
 # Get your API key at https://snipara.com/dashboard
 # snipara_api_key = "rlm_..."
 # snipara_project_slug = "your-project"
-'''
+"""
 
     config_path.write_text(config_content)
     console.print(f"[green]✓[/green] Created {config_path}")
@@ -130,7 +131,7 @@ docker_memory = "512m"
     # Create .env.example
     env_example = project_dir / ".env.example"
     if not env_example.exists():
-        env_content = '''# RLM Runtime Environment Variables
+        env_content = """# RLM Runtime Environment Variables
 
 # LLM API Keys (set the ones you need)
 OPENAI_API_KEY=
@@ -139,13 +140,15 @@ ANTHROPIC_API_KEY=
 # Snipara (optional)
 SNIPARA_API_KEY=
 SNIPARA_PROJECT_SLUG=
-'''
+"""
         env_example.write_text(env_content)
         console.print(f"[green]✓[/green] Created {env_example}")
 
     if not no_snipara:
         console.print()
-        console.print("[yellow]Tip:[/yellow] Get your Snipara API key at https://snipara.com/dashboard")
+        console.print(
+            "[yellow]Tip:[/yellow] Get your Snipara API key at https://snipara.com/dashboard"
+        )
         console.print("     Then set snipara_api_key and snipara_project_slug in rlm.toml")
 
 
@@ -169,19 +172,26 @@ def logs(
 
         if json_output:
             import json
+
             console.print(json.dumps([e.to_dict() for e in events], indent=2))
         else:
             for event in events:
                 console.print()
                 console.print(f"[bold cyan]Call {event.call_id}[/bold cyan] (depth={event.depth})")
-                console.print(f"  [dim]Prompt:[/dim] {event.prompt[:80]}{'...' if len(event.prompt) > 80 else ''}")
+                console.print(
+                    f"  [dim]Prompt:[/dim] {event.prompt[:80]}{'...' if len(event.prompt) > 80 else ''}"
+                )
                 if event.response:
-                    console.print(f"  [dim]Response:[/dim] {event.response[:80]}{'...' if len(event.response) > 80 else ''}")
+                    console.print(
+                        f"  [dim]Response:[/dim] {event.response[:80]}{'...' if len(event.response) > 80 else ''}"
+                    )
                 if event.tool_calls:
                     console.print(f"  [dim]Tools:[/dim] {[tc.name for tc in event.tool_calls]}")
                 if event.error:
                     console.print(f"  [red]Error:[/red] {event.error}")
-                console.print(f"  [dim]Tokens:[/dim] {event.input_tokens} in / {event.output_tokens} out")
+                console.print(
+                    f"  [dim]Tokens:[/dim] {event.input_tokens} in / {event.output_tokens} out"
+                )
                 console.print(f"  [dim]Duration:[/dim] {event.duration_ms}ms")
     else:
         trajectories = logger.list_recent(tail)
@@ -192,6 +202,7 @@ def logs(
 
         if json_output:
             import json
+
             console.print(json.dumps(trajectories, indent=2))
         else:
             table = Table(title="Recent Trajectories")
@@ -248,6 +259,7 @@ def mcp_serve() -> None:
     """
     try:
         from rlm.mcp import run_server
+
         run_server()
     except ImportError as e:
         console.print("[red]Error:[/red] MCP dependencies not installed")
@@ -287,9 +299,12 @@ def visualize(
             "streamlit",
             "run",
             viz_app.__file__,
-            "--server.port", str(port),
-            "--server.headless", "true",
-            "--browser.gatherUsageStats", "false",
+            "--server.port",
+            str(port),
+            "--server.headless",
+            "true",
+            "--browser.gatherUsageStats",
+            "false",
         ]
         sys.exit(stcli.main())
 
@@ -310,6 +325,7 @@ def doctor() -> None:
 
     # Check Python version
     import sys
+
     py_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     py_ok = sys.version_info >= (3, 10)
     checks.append(("Python version", py_ok, py_version))
@@ -341,6 +357,7 @@ def doctor() -> None:
     # Check Docker
     try:
         import docker
+
         client = docker.from_env()  # type: ignore[attr-defined]
         client.ping()
         checks.append(("Docker daemon", True, "running"))
@@ -356,6 +373,7 @@ def doctor() -> None:
 
     # Check API keys
     import os
+
     api_keys = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "SNIPARA_API_KEY"]
     for key in api_keys:
         if os.environ.get(key):

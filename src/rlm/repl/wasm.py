@@ -74,6 +74,7 @@ class WasmREPL(BaseREPL):
             # Try alternative import for different pyodide versions
             try:
                 import pyodide_py as pyodide
+
                 loadPyodide = pyodide.loadPyodide  # noqa: N806
             except ImportError:
                 raise ImportError(

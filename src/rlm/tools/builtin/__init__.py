@@ -254,19 +254,23 @@ def _create_list_files_tool() -> Tool:
             for match in matches:
                 try:
                     stat = match.stat()
-                    files.append({
-                        "path": str(match),
-                        "name": match.name,
-                        "is_dir": match.is_dir(),
-                        "size": stat.st_size if match.is_file() else None,
-                    })
+                    files.append(
+                        {
+                            "path": str(match),
+                            "name": match.name,
+                            "is_dir": match.is_dir(),
+                            "size": stat.st_size if match.is_file() else None,
+                        }
+                    )
                 except (OSError, PermissionError):
-                    files.append({
-                        "path": str(match),
-                        "name": match.name,
-                        "is_dir": match.is_dir(),
-                        "size": None,
-                    })
+                    files.append(
+                        {
+                            "path": str(match),
+                            "name": match.name,
+                            "is_dir": match.is_dir(),
+                            "size": None,
+                        }
+                    )
 
             return {
                 "files": files,

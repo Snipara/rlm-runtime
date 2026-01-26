@@ -112,7 +112,9 @@ class LiteLLMBackend(BaseBackend):
                 result.append(
                     ToolCall(
                         id=getattr(tc, "id", "unknown"),
-                        name=getattr(tc.function, "name", "unknown") if hasattr(tc, "function") else "unknown",
+                        name=getattr(tc.function, "name", "unknown")
+                        if hasattr(tc, "function")
+                        else "unknown",
                         arguments={"_error": str(e), "_raw": str(tc)},
                     )
                 )
@@ -158,9 +160,7 @@ class LiteLLMBackend(BaseBackend):
         response = await acompletion(**call_kwargs)
 
         choice = response.choices[0]
-        tool_calls = self._parse_tool_calls(
-            getattr(choice.message, "tool_calls", None)
-        )
+        tool_calls = self._parse_tool_calls(getattr(choice.message, "tool_calls", None))
 
         return BackendResponse(
             content=choice.message.content,

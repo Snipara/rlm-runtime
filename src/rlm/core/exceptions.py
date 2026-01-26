@@ -306,7 +306,9 @@ class ToolValidationError(ToolError):
         arguments: Invalid arguments
     """
 
-    def __init__(self, tool_name: str, validation_error: str, arguments: dict[str, Any] | None = None):
+    def __init__(
+        self, tool_name: str, validation_error: str, arguments: dict[str, Any] | None = None
+    ):
         super().__init__(
             f"Tool '{tool_name}' validation failed: {validation_error}",
             tool_name=tool_name,
