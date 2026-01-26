@@ -30,6 +30,9 @@ install:
 
 dev:
 	$(PIP) install -e ".[all]"
+	$(PIP) install pre-commit
+	pre-commit install
+	@echo "✓ Pre-commit hooks installed"
 
 test:
 	pytest tests/ -v --cov=rlm --cov-report=term-missing
@@ -46,6 +49,9 @@ lint:
 format:
 	ruff format src/ tests/
 	ruff check --fix src/ tests/
+
+format-check:
+	ruff format --check src/ tests/
 
 typecheck:
 	mypy src/
@@ -74,9 +80,9 @@ docker-start:
 docker-stop:
 	./scripts/docker-stop.sh
 
-# Quick check before commit
-check: lint typecheck test
-	@echo "All checks passed!"
+# Quick check before commit (mirrors CI)
+check: lint format-check typecheck test
+	@echo "✓ All checks passed!"
 
 # Publish to PyPI (requires credentials)
 publish: clean build
