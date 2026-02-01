@@ -71,8 +71,10 @@ class TestRLMConfig:
 class TestSniparaIntegration:
     """Tests for Snipara integration settings."""
 
-    def test_snipara_disabled_by_default(self):
+    def test_snipara_disabled_by_default(self, monkeypatch):
         """Should be disabled when no credentials."""
+        monkeypatch.delenv("SNIPARA_API_KEY", raising=False)
+        monkeypatch.delenv("SNIPARA_PROJECT_SLUG", raising=False)
         config = RLMConfig()
         assert config.snipara_enabled is False
 
@@ -109,8 +111,10 @@ class TestSniparaIntegration:
         url = config.get_snipara_url()
         assert url == "https://snipara.com/api/mcp/my-project"
 
-    def test_get_snipara_url_when_disabled(self):
+    def test_get_snipara_url_when_disabled(self, monkeypatch):
         """Should return None when disabled."""
+        monkeypatch.delenv("SNIPARA_API_KEY", raising=False)
+        monkeypatch.delenv("SNIPARA_PROJECT_SLUG", raising=False)
         config = RLMConfig()
         assert config.get_snipara_url() is None
 
@@ -259,8 +263,10 @@ class TestSaveConfig:
         assert 'snipara_api_key = "rlm_secret"' in content
         assert 'snipara_project_slug = "my-project"' in content
 
-    def test_comments_out_snipara_when_not_set(self, tmp_path):
+    def test_comments_out_snipara_when_not_set(self, tmp_path, monkeypatch):
         """Should comment out Snipara when not configured."""
+        monkeypatch.delenv("SNIPARA_API_KEY", raising=False)
+        monkeypatch.delenv("SNIPARA_PROJECT_SLUG", raising=False)
         config = RLMConfig()
         config_path = tmp_path / "rlm.toml"
 
