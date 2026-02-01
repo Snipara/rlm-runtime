@@ -49,6 +49,7 @@ src/rlm/
 │   └── auth.py              # Snipara OAuth token support
 ├── tools/                   # Tool system
 │   ├── registry.py          # Tool registration and lookup
+│   ├── snipara.py           # Native Snipara tools (OAuth HTTP client)
 │   └── sub_llm.py           # Sub-LLM orchestration tools
 ├── agent/                   # Autonomous agent
 │   ├── __init__.py          # Exports AgentRunner, AgentConfig, AgentResult
@@ -312,6 +313,7 @@ from rlm.core.exceptions import (
     REPLSecurityError,     # Security violation
     REPLResourceExceeded,  # Memory/CPU limit exceeded
     ToolNotFoundError,     # Unknown tool
+    SniparaAPIError,       # Snipara HTTP API error (native tools)
     BackendConnectionError, # LLM API error
 )
 ```
@@ -508,32 +510,96 @@ pytest --cov=src/rlm tests/
 4. **Lint** with `ruff check src/`
 5. **Commit** with descriptive messages
 
-## Using rlm-runtime-mcp with Snipara
+## Snipara Integration (Native Tools + MCP Fallback)
 
-Both MCP servers work together in Claude Code for powerful workflows:
+RLM can access Snipara context retrieval, memory, and shared collections
+through **two mechanisms** — a native HTTP client (preferred) and the
+`snipara-mcp` package (backward-compatible fallback).
+
+### Architecture
 
 ```
-Claude Code
+Orchestrator._register_snipara_tools()
     │
-    ├── rlm-runtime-mcp (code sandbox)
-    │   └── execute_python, get/set_repl_context
+    ├── Attempt 1: Native HTTP client (src/rlm/tools/snipara.py)
+    │   ├── SniparaClient.from_config(config)
+    │   │   ├── Auth: OAuth tokens (~/.snipara/tokens.json)
+    │   │   ├── Auth: SNIPARA_API_KEY env var
+    │   │   └── Auth: snipara_api_key in rlm.toml
+    │   └── get_native_snipara_tools(client, memory_enabled)
+    │       ├── Tier 1: rlm_context_query, rlm_search, rlm_sections, rlm_read
+    │       ├── Tier 2: rlm_remember, rlm_recall, rlm_memories, rlm_forget  (if memory_enabled)
+    │       └── Tier 3: rlm_shared_context
     │
-    └── snipara-mcp (context retrieval, OAuth)
-        └── context_query, search, shared_context
+    └── Attempt 2: snipara-mcp package (backward compat)
+        └── from snipara_mcp.rlm_tools import get_snipara_tools
 ```
+
+### Auth Resolution Order
+
+Credentials are resolved top-down; the first match wins:
+
+| Priority | Source | Header | Notes |
+|----------|--------|--------|-------|
+| 1 | OAuth tokens (`~/.snipara/tokens.json`) | `Authorization: Bearer <token>` | Via `snipara-mcp-login` browser flow |
+| 2 | `SNIPARA_API_KEY` env var | `x-api-key: <key>` | For open-source / non-Snipara users |
+| 3 | `snipara_api_key` in `rlm.toml` | `x-api-key: <key>` | Static config fallback |
+| 4 | `snipara-mcp` package import | (package handles auth) | Backward compat only |
+
+If none of the above are available, Snipara tools are silently skipped.
 
 ### Setup
 
 ```bash
-# Install both
-pip install rlm-runtime[mcp] snipara-mcp
+# Option A: OAuth (recommended — no API key copying)
+pip install rlm-runtime[mcp]
+snipara-mcp-login      # Opens browser, stores tokens
+snipara-mcp-status     # Verify auth status
 
-# Authenticate with Snipara (OAuth - no API key copying)
-snipara-mcp-login      # Opens browser
-snipara-mcp-status     # Check auth status
+# Option B: API key (open-source users)
+export SNIPARA_API_KEY="rlm_your_key_here"
+export SNIPARA_PROJECT_SLUG="your-project-slug"
+
+# Option C: snipara-mcp package (backward compat)
+pip install rlm-runtime[mcp] snipara-mcp
 ```
 
 Tokens stored at `~/.snipara/tokens.json`.
+
+### Environment Variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `SNIPARA_API_KEY` | Raw API key for authentication | None |
+| `SNIPARA_PROJECT_SLUG` | Project slug for API URL | None |
+| `RLM_SNIPARA_BASE_URL` | Override API base URL | `https://snipara.com/api/mcp` |
+| `RLM_MEMORY_ENABLED` | Enable Tier 2 memory tools | `false` |
+
+### Native Snipara Tools Reference
+
+**Tier 1 — Context Retrieval** (always registered):
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `rlm_context_query` | Semantic/keyword/hybrid doc search | `query`, `max_tokens=4000`, `search_mode=hybrid` |
+| `rlm_search` | Regex pattern search across docs | `pattern`, `max_results=20` |
+| `rlm_sections` | List indexed doc sections | `filter`, `limit=50`, `offset=0` |
+| `rlm_read` | Read specific lines from docs | `start_line`, `end_line` |
+
+**Tier 2 — Memory** (gated by `memory_enabled`):
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `rlm_remember` | Store a memory for later recall | `content`, `type=fact`, `scope=project`, `ttl_days` |
+| `rlm_recall` | Semantic recall by query | `query`, `limit=5`, `min_relevance=0.5` |
+| `rlm_memories` | List memories with filters | `type`, `scope`, `category`, `search` |
+| `rlm_forget` | Delete memories | `memory_id`, `type`, `category`, `older_than_days` |
+
+**Tier 3 — Advanced** (always registered):
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `rlm_shared_context` | Merged team docs with budget allocation | `categories[]`, `max_tokens=4000`, `include_content=true` |
 
 ### Complex Use Cases
 
@@ -627,20 +693,12 @@ Claude workflow:
 | Domain knowledge | | ✅ |
 | **Complex tasks** | ✅ + ✅ | ✅ + ✅ |
 
-### Snipara Tools Reference
+### This Project's Snipara Configuration
 
-| Tool | Purpose |
-|------|---------|
-| `context_query` | Semantic search for relevant documentation |
-| `search` | Regex pattern search across docs |
-| `sections` | List available documentation sections |
-| `shared_context` | Get team guidelines and best practices |
-
-### Project Configuration
-
-For this project (rlm-runtime), Snipara is configured with:
-- **Project ID**: `cmkqwxi7c0007kq0nsf944wpr`
-- **Auth**: OAuth tokens at `~/.snipara/tokens.json`
+For rlm-runtime development, Snipara is configured via:
+- **Auth**: OAuth tokens at `~/.snipara/tokens.json` (via `snipara-mcp-login`)
+- **Project slug**: Resolved automatically from OAuth token metadata
+- **Tools**: Native HTTP client (`src/rlm/tools/snipara.py`) — no `snipara-mcp` package needed
 
 ## Key Files for Common Tasks
 
@@ -657,6 +715,8 @@ For this project (rlm-runtime), Snipara is configured with:
 | Modify agent behavior | `src/rlm/agent/runner.py` |
 | Change agent prompts | `src/rlm/agent/prompts.py` |
 | Modify sub-LLM tools | `src/rlm/tools/sub_llm.py` |
+| Modify Snipara tools | `src/rlm/tools/snipara.py` |
+| Snipara OAuth auth | `src/rlm/mcp/auth.py` |
 | Change agent limits | `src/rlm/agent/config.py`, `src/rlm/agent/guardrails.py` |
 | Add terminal protocol | `src/rlm/agent/terminal.py` |
 
