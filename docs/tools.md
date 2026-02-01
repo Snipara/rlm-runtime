@@ -16,13 +16,33 @@ RLM includes these builtin tools:
 | `file_read` | Read file contents |
 | `list_files` | List files in a directory |
 
-When Snipara is configured, additional tools are available:
+When Snipara is configured (via OAuth, API key, or `snipara-mcp`), additional tools are auto-registered:
+
+**Tier 1 — Context Retrieval** (always registered):
 
 | Tool | Description |
 |------|-------------|
-| `context_query` | Query project context semantically |
-| `sections` | Get code sections by path |
-| `search` | Hybrid keyword + semantic search |
+| `rlm_context_query` | Semantic/keyword/hybrid doc search |
+| `rlm_search` | Regex pattern search across docs |
+| `rlm_sections` | List indexed doc sections with pagination |
+| `rlm_read` | Read specific lines from documentation |
+
+**Tier 2 — Memory** (when `memory_enabled = true`):
+
+| Tool | Description |
+|------|-------------|
+| `rlm_remember` | Store a memory for later recall |
+| `rlm_recall` | Semantic recall by query |
+| `rlm_memories` | List memories with filters |
+| `rlm_forget` | Delete memories by ID/type/category/age |
+
+**Tier 3 — Advanced** (always registered):
+
+| Tool | Description |
+|------|-------------|
+| `rlm_shared_context` | Merged team docs with budget allocation |
+
+See [Snipara Integration](snipara.md) for full parameter details.
 
 ## Creating Custom Tools
 

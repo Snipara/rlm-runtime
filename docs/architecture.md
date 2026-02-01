@@ -46,7 +46,8 @@ RLM Runtime is a local-first execution environment for Recursive Language Models
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Tool Registry                                                              │
 │  ├── Builtin: execute_code, file_read, list_files                          │
-│  ├── Snipara: context_query, sections, search (optional plugin)            │
+│  ├── Snipara: rlm_context_query, rlm_search, rlm_sections, rlm_read,     │
+│  │   rlm_shared_context + memory tools (native HTTP or snipara-mcp)       │
 │  └── Custom: user-defined tools                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  MCP Server (zero API keys, for Claude Code)                               │
@@ -228,15 +229,21 @@ Features:
 
 ### Snipara Integration
 
-When `snipara-mcp` is installed and configured, Snipara tools are auto-registered:
+Snipara tools are auto-registered via the native HTTP client (preferred)
+or the `snipara-mcp` package (fallback). Auth resolves from OAuth tokens,
+`SNIPARA_API_KEY` env var, or `snipara_api_key` in config:
 
 ```python
 rlm = RLM(
     snipara_api_key="rlm_...",
     snipara_project_slug="my-project",
 )
-# Tools available: context_query, sections, search, shared_context
+# Tools available: rlm_context_query, rlm_search, rlm_sections,
+# rlm_read, rlm_shared_context (+ rlm_remember/recall/memories/forget
+# when memory_enabled=True)
 ```
+
+See [Snipara Integration Guide](snipara.md) for full details.
 
 ### Custom Tools
 
@@ -288,7 +295,8 @@ RLMError (base)
 ├── Tool Errors
 │   ├── ToolNotFoundError
 │   ├── ToolExecutionError
-│   └── ToolValidationError
+│   ├── ToolValidationError
+│   └── SniparaAPIError
 ├── Backend Errors
 │   ├── BackendConnectionError
 │   ├── BackendRateLimitError

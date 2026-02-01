@@ -51,10 +51,11 @@ docker_memory = "512m"
 docker_network_disabled = true
 docker_timeout = 30
 
-# Snipara Integration (optional)
+# Snipara Integration (optional — or use OAuth via snipara-mcp-login)
 snipara_api_key = "rlm_..."
 snipara_project_slug = "my-project"
 snipara_base_url = "https://api.snipara.com/mcp"
+memory_enabled = false            # Enable Tier 2 memory tools
 ```
 
 ## Environment Variables
@@ -89,9 +90,11 @@ export RLM_DOCKER_MEMORY=512m
 export RLM_DOCKER_NETWORK_DISABLED=true
 export RLM_DOCKER_TIMEOUT=30
 
-# Snipara (no RLM_ prefix)
+# Snipara (no RLM_ prefix for key/slug)
 export SNIPARA_API_KEY=rlm_...
 export SNIPARA_PROJECT_SLUG=my-project
+export RLM_SNIPARA_BASE_URL=https://api.snipara.com/mcp  # override base URL
+export RLM_MEMORY_ENABLED=true                            # enable memory tools
 ```
 
 ## API Key Configuration
@@ -186,11 +189,16 @@ rlm = RLM(config=config)
 
 ### Snipara Integration
 
+OAuth tokens (`~/.snipara/tokens.json`) are checked first. If unavailable,
+`SNIPARA_API_KEY` env var and config values are used as fallback. See
+[Snipara Integration](snipara.md) for full auth resolution order.
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `snipara_api_key` | str | None | Snipara API key |
-| `snipara_project_slug` | str | None | Snipara project slug |
-| `snipara_base_url` | str | `"https://api.snipara.com/mcp"` | Snipara API base URL |
+| `snipara_api_key` | str | None | Snipara API key (or use `SNIPARA_API_KEY` env var) |
+| `snipara_project_slug` | str | None | Project slug (or use `SNIPARA_PROJECT_SLUG` env var) |
+| `snipara_base_url` | str | `"https://api.snipara.com/mcp"` | API base URL |
+| `memory_enabled` | bool | `false` | Enable Tier 2 memory tools (remember/recall/memories/forget) |
 
 ## Per-Project Configuration
 

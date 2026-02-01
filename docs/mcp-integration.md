@@ -139,7 +139,32 @@ The following are blocked for security:
 
 ## Using with Snipara
 
-For context retrieval from your documentation, use the snipara-mcp server alongside rlm-runtime:
+RLM can access Snipara context retrieval and memory tools through two mechanisms.
+
+### Option A: Native Tools (Recommended)
+
+When using the RLM orchestrator (not just the MCP server), Snipara tools
+are registered automatically via the native HTTP client. Authenticate
+with OAuth or set `SNIPARA_API_KEY`:
+
+```bash
+# OAuth (recommended)
+snipara-mcp-login      # Opens browser
+snipara-mcp-status     # Verify
+
+# Or API key
+export SNIPARA_API_KEY=rlm_...
+export SNIPARA_PROJECT_SLUG=my-project
+```
+
+This registers `rlm_context_query`, `rlm_search`, `rlm_sections`,
+`rlm_read`, and `rlm_shared_context` (plus memory tools if enabled).
+No separate MCP server needed.
+
+### Option B: Separate snipara-mcp Server
+
+For MCP-only setups (e.g., Claude Desktop without the orchestrator),
+run snipara-mcp as a separate server alongside rlm-runtime:
 
 ```json
 {
@@ -155,22 +180,17 @@ For context retrieval from your documentation, use the snipara-mcp server alongs
 }
 ```
 
-Authenticate with Snipara using OAuth Device Flow (no API key copying needed):
-
 ```bash
-# Install snipara-mcp
 pip install snipara-mcp
-
-# Login via browser
-snipara-mcp-login
-
-# Check status
-snipara-mcp-status
+snipara-mcp-login      # Login via browser
+snipara-mcp-status     # Check status
 ```
 
 This provides:
 - **rlm-runtime**: Code execution sandbox (no API keys)
 - **snipara-mcp**: Context retrieval (OAuth authentication)
+
+See [Snipara Integration](snipara.md) for full details on tools and auth.
 
 ## Troubleshooting
 
@@ -275,16 +295,21 @@ Claude Code (LLM + billing included)
     │
     ├── rlm-runtime-mcp (code sandbox)
     │   ├── execute_python
-    │   ├── get_repl_context
-    │   ├── set_repl_context
-    │   └── clear_repl_context
+    │   ├── get_repl_context / set_repl_context / clear_repl_context
+    │   └── list_sessions / destroy_session
     │
-    └── snipara-mcp (optional, OAuth auth)
-        └── search_context
+    ├── Native Snipara tools (via orchestrator, OAuth or API key)
+    │   ├── rlm_context_query, rlm_search, rlm_sections, rlm_read
+    │   ├── rlm_shared_context
+    │   └── rlm_remember/recall/memories/forget (if memory_enabled)
+    │
+    └── snipara-mcp (optional separate server, OAuth auth)
+        └── Backward-compatible fallback
 ```
 
 This architecture provides:
 - **Zero API costs** - All LLM calls go through Claude Code
 - **Sandboxed execution** - Safe Python code execution
 - **Persistent state** - Variables carry over between calls
-- **Context retrieval** - Optional Snipara integration
+- **Context retrieval** - Native Snipara tools or snipara-mcp fallback
+- **Semantic memory** - Store and recall facts across sessions

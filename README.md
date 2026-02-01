@@ -46,12 +46,15 @@ Claude Code (LLM + billing included)
     │
     ├── rlm-runtime-mcp (code sandbox - no API keys)
     │   ├── execute_python
-    │   ├── get_repl_context
-    │   ├── set_repl_context
-    │   └── clear_repl_context
+    │   ├── get/set/clear_repl_context
+    │   └── list_sessions / destroy_session
     │
-    └── snipara-mcp (optional, OAuth auth)
-        └── search_context
+    ├── Native Snipara tools (OAuth or API key)
+    │   ├── rlm_context_query, rlm_search, rlm_sections, rlm_read
+    │   ├── rlm_shared_context
+    │   └── rlm_remember/recall/memories/forget (if memory_enabled)
+    │
+    └── snipara-mcp (optional fallback, OAuth auth)
 ```
 
 ### Setup
@@ -100,7 +103,24 @@ Claude Code (LLM + billing included)
 
 ### With Snipara (Optional)
 
-For context retrieval, add snipara-mcp alongside rlm-runtime:
+Snipara tools are registered automatically when credentials are available.
+The native HTTP client is preferred; `snipara-mcp` is a fallback.
+
+**Option A: OAuth (recommended)**
+
+```bash
+snipara-mcp-login      # Opens browser for authentication
+snipara-mcp-status     # Check auth status
+```
+
+**Option B: API key**
+
+```bash
+export SNIPARA_API_KEY=rlm_your_key_here
+export SNIPARA_PROJECT_SLUG=your-project
+```
+
+**Option C: Separate snipara-mcp server (legacy)**
 
 ```json
 {
@@ -114,14 +134,6 @@ For context retrieval, add snipara-mcp alongside rlm-runtime:
     }
   }
 }
-```
-
-Authenticate with OAuth (no API key copying):
-
-```bash
-pip install snipara-mcp
-snipara-mcp-login      # Opens browser for authentication
-snipara-mcp-status     # Check auth status
 ```
 
 See [MCP Integration Guide](docs/mcp-integration.md) for details.
@@ -197,7 +209,8 @@ rlm = RLM(
     snipara_project_slug="my-project",
 )
 
-# Snipara tools auto-registered: context_query, sections, search, etc.
+# Snipara tools auto-registered: rlm_context_query, rlm_search,
+# rlm_sections, rlm_read, rlm_shared_context (+ memory tools if enabled)
 result = await rlm.completion("Explain how authentication works in this project")
 ```
 
@@ -269,8 +282,8 @@ rlm run --env docker "Process untrusted user input..."
 │  • Anthropic               │                                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  Tool Registry                                                  │
-│  • Builtin: file_read, execute_code                            │
-│  • Snipara: context_query, sections, search (optional)         │
+│  • Builtin: file_read, execute_code, list_files                │
+│  • Snipara: rlm_context_query, rlm_search, rlm_sections, etc. │
 │  • Custom: your own tools                                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -379,10 +392,11 @@ rlm = RLM(
     # Tools
     tools=None,                    # List of custom Tool objects
 
-    # Snipara Integration
-    snipara_api_key=None,          # Snipara API key
-    snipara_project_slug=None,     # Snipara project slug
-    snipara_api_url=None,          # Custom API URL
+    # Snipara Integration (native tools or snipara-mcp fallback)
+    snipara_api_key=None,          # Snipara API key (or use SNIPARA_API_KEY env var)
+    snipara_project_slug=None,     # Project slug (or use SNIPARA_PROJECT_SLUG env var)
+    snipara_base_url=None,         # Custom API URL (default: https://api.snipara.com/mcp)
+    memory_enabled=False,          # Enable Tier 2 memory tools
 
     # Logging
     verbose=False,                 # Print execution details
