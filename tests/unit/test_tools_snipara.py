@@ -356,7 +356,7 @@ class TestToolExecution:
             "rlm_context_query",
             {
                 "query": "What is RLM?",
-                "max_tokens": 4000,
+                "max_tokens": 2000,
                 "search_mode": "hybrid",
                 "prefer_summaries": False,
                 "include_metadata": True,

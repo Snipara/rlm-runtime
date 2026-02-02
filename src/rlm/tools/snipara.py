@@ -484,7 +484,7 @@ def _create_context_query_tool(client: SniparaClient) -> Tool:
 
     async def rlm_context_query(
         query: str,
-        max_tokens: int = 4000,
+        max_tokens: int = 2000,
         search_mode: str = "hybrid",
         prefer_summaries: bool = False,
         include_metadata: bool = True,
@@ -515,7 +515,7 @@ def _create_context_query_tool(client: SniparaClient) -> Tool:
                 },
                 "max_tokens": {
                     "type": "integer",
-                    "default": 4000,
+                    "default": 2000,
                     "description": "Maximum tokens in response (100-100000)",
                 },
                 "search_mode": {
@@ -590,7 +590,7 @@ def _create_sections_tool(client: SniparaClient) -> Tool:
 
     async def rlm_sections(
         filter: str | None = None,
-        limit: int = 50,
+        limit: int = 20,
         offset: int = 0,
     ) -> Any:
         return await client.call_tool(
@@ -610,7 +610,7 @@ def _create_sections_tool(client: SniparaClient) -> Tool:
                 },
                 "limit": {
                     "type": "integer",
-                    "default": 50,
+                    "default": 20,
                     "description": "Maximum sections to return (max: 500)",
                 },
                 "offset": {
@@ -632,10 +632,15 @@ def _create_read_tool(client: SniparaClient) -> Tool:
     section to look at, it can read the exact lines.
     """
 
+    max_read_lines = 200
+
     async def rlm_read(
         start_line: int,
         end_line: int,
     ) -> Any:
+        # Cap the range to avoid pulling excessive content
+        if end_line - start_line > max_read_lines:
+            end_line = start_line + max_read_lines
         return await client.call_tool(
             "rlm_read",
             {"start_line": start_line, "end_line": end_line},
@@ -643,7 +648,7 @@ def _create_read_tool(client: SniparaClient) -> Tool:
 
     return Tool(
         name="rlm_read",
-        description="Read specific lines from documentation.",
+        description="Read specific lines from documentation. Max 200 lines per call.",
         parameters={
             "type": "object",
             "properties": {
@@ -957,7 +962,7 @@ def _create_shared_context_tool(client: SniparaClient) -> Tool:
 
     async def rlm_shared_context(
         categories: list[str] | None = None,
-        max_tokens: int = 4000,
+        max_tokens: int = 2000,
         include_content: bool = True,
     ) -> Any:
         return await client.call_tool(
@@ -989,7 +994,7 @@ def _create_shared_context_tool(client: SniparaClient) -> Tool:
                 },
                 "max_tokens": {
                     "type": "integer",
-                    "default": 4000,
+                    "default": 2000,
                     "description": "Maximum tokens in response (100-100000)",
                 },
                 "include_content": {

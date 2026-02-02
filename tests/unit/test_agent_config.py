@@ -20,7 +20,7 @@ class TestAgentConfig:
         assert config.cost_limit == 2.0
         assert config.timeout_seconds == 120
         assert config.auto_context is True
-        assert config.context_budget == 8000
+        assert config.context_budget == 4000
         assert config.trajectory_log is True
 
     def test_clamp_max_iterations(self):

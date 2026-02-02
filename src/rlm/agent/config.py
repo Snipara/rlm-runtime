@@ -24,7 +24,7 @@ class AgentConfig:
     cost_limit: float = 2.0
     timeout_seconds: int = 120
     auto_context: bool = True  # Auto-load Snipara context on first iteration
-    context_budget: int = 8000
+    context_budget: int = 4000
     trajectory_log: bool = True
     tool_budget: int = 50  # Tool calls across all iterations
 
