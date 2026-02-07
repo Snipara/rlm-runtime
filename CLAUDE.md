@@ -430,6 +430,38 @@ rlm mcp-serve         # Start MCP server
 rlm doctor            # Check setup
 ```
 
+## Slash Commands
+
+Claude Code slash commands for quick access to RLM tools:
+
+| Command | Action |
+|---------|--------|
+| `/repl <code>` | Execute Python in sandboxed REPL |
+| `/repl context` | Show persistent variables |
+| `/repl clear` | Reset REPL session |
+| `/repl set <key> <val>` | Store a variable |
+
+### Examples
+
+```
+/repl print(2 + 2)
+# Output: 4
+
+/repl data = {"users": 100, "active": 42}
+/repl print(f"Active: {data['active']/data['users']*100}%")
+# Output: Active: 42.0%
+
+/repl context
+# Shows: data = {"users": 100, "active": 42}
+
+/repl clear
+# Session reset
+```
+
+### Available Imports
+
+The sandboxed REPL allows: `json`, `re`, `math`, `datetime`, `collections`, `itertools`, `functools`, `operator`, `string`, `random`, `hashlib`, `base64`, `urllib.parse`.
+
 ## Trajectory Visualizer (Streamlit)
 
 The visualizer is a Streamlit web dashboard for exploring RLM execution trajectories.
