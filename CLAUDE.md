@@ -548,6 +548,55 @@ RLM can access Snipara context retrieval, memory, and shared collections
 through **two mechanisms** — a native HTTP client (preferred) and the
 `snipara-mcp` package (backward-compatible fallback).
 
+### Quick Start (Choose ONE)
+
+**Option 1: OAuth (Recommended)**
+```bash
+pip install snipara-mcp        # Install OAuth helper
+snipara-mcp-login              # Opens browser, stores tokens
+rlm snipara-status             # Verify authentication ✓
+```
+
+**Option 2: API Key**
+```bash
+# Get free key at https://snipara.com/dashboard (100 queries/mo, no credit card)
+export SNIPARA_API_KEY="rlm_your_key_here"
+export SNIPARA_PROJECT_SLUG="your-project-slug"
+rlm snipara-status             # Verify authentication ✓
+```
+
+**Option 3: Config File (rlm.toml)**
+```toml
+[rlm]
+snipara_api_key = "rlm_your_key_here"
+snipara_project_slug = "your-project-slug"
+```
+
+### Debugging Auth Issues
+
+```bash
+rlm snipara-status             # Shows auth method, tokens, config
+```
+
+This command displays:
+- Current authentication method (OAuth vs API Key)
+- OAuth token status (valid/expired) for each project
+- Environment variables
+- Config file settings
+- Which project will be used
+
+### Multiple Projects
+
+If you have OAuth tokens for multiple Snipara projects, specify which one to use:
+
+```toml
+# rlm.toml
+[rlm]
+snipara_project_slug = "my-specific-project"
+```
+
+Without this setting, RLM uses the first valid (non-expired) token.
+
 ### Architecture
 
 ```

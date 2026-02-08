@@ -415,6 +415,173 @@ def version() -> None:
     console.print(f"rlm-runtime {__version__}")
 
 
+@app.command("snipara-status")
+def snipara_status(
+    config_file: Path | None = typer.Option(None, "--config", "-c", help="Config file path"),
+) -> None:
+    """Show Snipara authentication status and configuration.
+
+    Displays which authentication method is active, available tokens,
+    and configuration from rlm.toml. Use this to debug auth issues.
+
+    Quick Setup:
+      1. OAuth (recommended): pip install snipara-mcp && snipara-mcp-login
+      2. API Key: export SNIPARA_API_KEY=rlm_... && export SNIPARA_PROJECT_SLUG=...
+      3. Config: Add snipara_api_key and snipara_project_slug to rlm.toml
+    """
+    import os
+    from datetime import datetime, timezone
+
+    from rlm.core.config import load_config
+    from rlm.mcp.auth import SNIPARA_TOKEN_FILE, get_auth_status, load_snipara_tokens
+
+    config = load_config(config_file)
+    auth_status = get_auth_status()
+
+    # Header
+    console.print("[bold]Snipara Authentication Status[/bold]")
+    console.print()
+
+    # Current auth method
+    auth_method = auth_status.get("auth_method")
+    if auth_method == "oauth":
+        console.print("[green]✓[/green] Authenticated via [bold]OAuth[/bold]")
+    elif auth_method == "api_key":
+        console.print("[green]✓[/green] Authenticated via [bold]API Key[/bold]")
+    else:
+        console.print("[red]✗[/red] Not authenticated")
+        console.print()
+        console.print("[yellow]Quick Setup:[/yellow]")
+        console.print("  Option 1 (OAuth - recommended):")
+        console.print("    pip install snipara-mcp")
+        console.print("    snipara-mcp-login")
+        console.print()
+        console.print("  Option 2 (API Key):")
+        console.print("    export SNIPARA_API_KEY=rlm_your_key_here")
+        console.print("    export SNIPARA_PROJECT_SLUG=your-project")
+        console.print()
+        console.print("  Get a free API key at: https://snipara.com/dashboard")
+        return
+
+    console.print()
+
+    # OAuth Tokens section
+    tokens = load_snipara_tokens()
+    if tokens:
+        console.print(f"[bold]OAuth Tokens[/bold] ({SNIPARA_TOKEN_FILE})")
+        table = Table(show_header=True)
+        table.add_column("Project Slug", style="cyan")
+        table.add_column("Status")
+        table.add_column("Expires")
+
+        now = datetime.now(timezone.utc)
+        for _tid, tdata in tokens.items():
+            slug = tdata.get("project_slug", "unknown")
+            expires_at = tdata.get("expires_at")
+
+            if expires_at:
+                try:
+                    exp_time = datetime.fromisoformat(expires_at)
+                    if exp_time.tzinfo is None:
+                        exp_time = exp_time.replace(tzinfo=timezone.utc)
+
+                    if exp_time < now:
+                        status = "[red]Expired[/red]"
+                        expires_str = exp_time.strftime("%Y-%m-%d %H:%M")
+                    else:
+                        remaining = (exp_time - now).total_seconds()
+                        if remaining < 3600:
+                            status = "[yellow]Expiring soon[/yellow]"
+                        else:
+                            status = "[green]Valid[/green]"
+                        expires_str = exp_time.strftime("%Y-%m-%d %H:%M")
+                except (ValueError, TypeError):
+                    status = "[dim]Unknown[/dim]"
+                    expires_str = "?"
+            else:
+                status = "[dim]No expiry[/dim]"
+                expires_str = "N/A"
+
+            table.add_row(slug, status, expires_str)
+
+        console.print(table)
+        console.print()
+
+    # Environment variables
+    console.print("[bold]Environment Variables[/bold]")
+    api_key = os.environ.get("SNIPARA_API_KEY")
+    project_slug_env = os.environ.get("SNIPARA_PROJECT_SLUG")
+
+    if api_key:
+        masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
+        console.print(f"  SNIPARA_API_KEY: [green]{masked}[/green]")
+    else:
+        console.print("  SNIPARA_API_KEY: [dim]not set[/dim]")
+
+    if project_slug_env:
+        console.print(f"  SNIPARA_PROJECT_SLUG: [green]{project_slug_env}[/green]")
+    else:
+        console.print("  SNIPARA_PROJECT_SLUG: [dim]not set[/dim]")
+
+    console.print()
+
+    # Config file settings
+    console.print("[bold]Config File (rlm.toml)[/bold]")
+    if config.snipara_api_key:
+        masked = (
+            config.snipara_api_key[:8] + "..." + config.snipara_api_key[-4:]
+            if len(config.snipara_api_key) > 12
+            else "***"
+        )
+        console.print(f"  snipara_api_key: [green]{masked}[/green]")
+    else:
+        console.print("  snipara_api_key: [dim]not set[/dim]")
+
+    if config.snipara_project_slug:
+        console.print(f"  snipara_project_slug: [green]{config.snipara_project_slug}[/green]")
+    else:
+        console.print("  snipara_project_slug: [dim]not set[/dim]")
+
+    console.print()
+
+    # Effective configuration
+    console.print("[bold]Effective Configuration[/bold]")
+    console.print(f"  Auth Method: [cyan]{auth_method or 'none'}[/cyan]")
+    console.print(
+        f"  Memory Enabled: {'[green]Yes[/green]' if config.memory_enabled else '[dim]No (auto-enabled with OAuth)[/dim]'}"
+    )
+
+    # Show which project will be used
+    if config.snipara_project_slug:
+        console.print(f"  Target Project: [cyan]{config.snipara_project_slug}[/cyan]")
+    elif tokens:
+        # Find first valid token
+        for _tid, tdata in tokens.items():
+            expires_at = tdata.get("expires_at")
+            if expires_at:
+                try:
+                    exp_time = datetime.fromisoformat(expires_at)
+                    if exp_time.tzinfo is None:
+                        exp_time = exp_time.replace(tzinfo=timezone.utc)
+                    if exp_time >= now:
+                        console.print(
+                            f"  Target Project: [cyan]{tdata.get('project_slug', 'unknown')}[/cyan] (first valid token)"
+                        )
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+    console.print()
+
+    # Recommendations
+    if not config.snipara_project_slug and len(tokens) > 1:
+        console.print("[yellow]Tip:[/yellow] You have multiple OAuth tokens.")
+        console.print("     Set snipara_project_slug in rlm.toml to select a specific project:")
+        console.print()
+        console.print("     [rlm]")
+        console.print('     snipara_project_slug = "your-project"')
+
+
 @app.command("mcp-serve")
 def mcp_serve() -> None:
     """Start the MCP server for Claude Desktop/Code integration.
