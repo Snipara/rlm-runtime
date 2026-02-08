@@ -45,7 +45,7 @@ def get_snipara_token(project_id: str | None = None) -> dict[str, Any] | None:
     Get Snipara OAuth token for a project.
 
     Args:
-        project_id: Specific project ID, or None to get first available
+        project_id: Specific project ID or project slug, or None to get first valid
 
     Returns:
         Token data if valid, None otherwise
@@ -55,18 +55,31 @@ def get_snipara_token(project_id: str | None = None) -> dict[str, Any] | None:
     if not tokens:
         return None
 
-    # If no project_id specified, use the first available token
-    if project_id is None:
-        if tokens:
-            project_id = next(iter(tokens.keys()))
-        else:
-            return None
-
-    token_data = tokens.get(project_id)
-    if not token_data:
+    # If project_id specified, look it up directly (by ID or slug)
+    if project_id is not None:
+        # First try exact match by ID
+        token_data = tokens.get(project_id)
+        if not token_data:
+            # Try matching by project_slug
+            for _tid, tdata in tokens.items():
+                if tdata.get("project_slug") == project_id:
+                    token_data = tdata
+                    break
+        if token_data:
+            return _validate_and_return_token(token_data)
         return None
 
-    # Check if token is expired
+    # No project_id specified - find first VALID (non-expired) token
+    for _tid, tdata in tokens.items():
+        validated = _validate_and_return_token(tdata)
+        if validated:
+            return validated
+
+    return None
+
+
+def _validate_and_return_token(token_data: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate token expiration and return if valid."""
     expires_at = token_data.get("expires_at")
     if expires_at:
         try:

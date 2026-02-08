@@ -186,8 +186,12 @@ class SniparaClient:
             A configured ``SniparaClient``, or ``None`` if credentials
             could not be resolved.
         """
+        # Determine target project slug from config first (if specified)
+        target_project = config.snipara_project_slug
+
         # Step 1: Try OAuth tokens / SNIPARA_API_KEY env via auth.py
-        auth_header, project_slug = get_snipara_auth()
+        # If we have a target project, pass it to select the right token
+        auth_header, project_slug = get_snipara_auth(target_project)
 
         # Step 2: Fall back to rlm.toml / pydantic-settings values
         if auth_header is None and config.snipara_api_key:
