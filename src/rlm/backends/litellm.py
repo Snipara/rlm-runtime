@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import warnings
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -14,6 +15,16 @@ from rlm.backends.base import BackendResponse, BaseBackend, Tool
 from rlm.core.types import Message, ToolCall
 
 logger = logging.getLogger(__name__)
+
+# Suppress Pydantic serialization warnings from LiteLLM
+# These occur when LiteLLM's internal models don't match API responses exactly
+# This is a LiteLLM issue, not an rlm-runtime issue
+warnings.filterwarnings(
+    "ignore",
+    message=".*Expected.*fields.*",
+    category=UserWarning,
+    module="pydantic.*",
+)
 
 
 class LiteLLMBackend(BaseBackend):
@@ -92,16 +103,50 @@ class LiteLLMBackend(BaseBackend):
         return result
 
     def _parse_tool_calls(self, tool_calls: list[Any] | None) -> list[ToolCall]:
-        """Parse tool calls from LiteLLM response."""
+        """Parse tool calls from LiteLLM response.
+
+        Handles various edge cases from different LLM providers:
+        - Arguments as JSON string (OpenAI standard)
+        - Arguments as dict (some providers)
+        - Arguments as None or empty string (malformed)
+        """
         if not tool_calls:
             return []
 
         result: list[ToolCall] = []
         for tc in tool_calls:
             try:
-                arguments = tc.function.arguments
-                if isinstance(arguments, str):
-                    arguments = json.loads(arguments)
+                # Get raw arguments - may be string, dict, or None
+                raw_args = getattr(tc.function, "arguments", None)
+
+                # Parse arguments based on type
+                if raw_args is None:
+                    arguments = {}
+                    logger.warning(
+                        "Tool call has None arguments: tool=%s id=%s",
+                        getattr(tc.function, "name", "unknown"),
+                        getattr(tc, "id", "unknown"),
+                    )
+                elif isinstance(raw_args, str):
+                    if raw_args.strip() == "":
+                        arguments = {}
+                        logger.warning(
+                            "Tool call has empty string arguments: tool=%s id=%s",
+                            getattr(tc.function, "name", "unknown"),
+                            getattr(tc, "id", "unknown"),
+                        )
+                    else:
+                        arguments = json.loads(raw_args)
+                elif isinstance(raw_args, dict):
+                    arguments = raw_args
+                else:
+                    # Try to convert to dict
+                    arguments = dict(raw_args) if raw_args else {}
+                    logger.warning(
+                        "Tool call has unexpected arguments type: tool=%s type=%s",
+                        getattr(tc.function, "name", "unknown"),
+                        type(raw_args).__name__,
+                    )
 
                 result.append(
                     ToolCall(
@@ -110,15 +155,29 @@ class LiteLLMBackend(BaseBackend):
                         arguments=arguments,
                     )
                 )
-            except (json.JSONDecodeError, AttributeError) as e:
-                # Log but don't fail on malformed tool calls
+            except (json.JSONDecodeError, AttributeError, TypeError) as e:
+                # Log and create error ToolCall for malformed responses
+                tool_name = (
+                    getattr(tc.function, "name", "unknown")
+                    if hasattr(tc, "function")
+                    else "unknown"
+                )
+                raw_args_str = (
+                    str(getattr(tc.function, "arguments", None))[:200]
+                    if hasattr(tc, "function")
+                    else "N/A"
+                )
+                logger.error(
+                    "Failed to parse tool call arguments: tool=%s error=%s raw=%s",
+                    tool_name,
+                    str(e),
+                    raw_args_str,
+                )
                 result.append(
                     ToolCall(
                         id=getattr(tc, "id", "unknown"),
-                        name=getattr(tc.function, "name", "unknown")
-                        if hasattr(tc, "function")
-                        else "unknown",
-                        arguments={"_error": str(e), "_raw": str(tc)},
+                        name=tool_name,
+                        arguments={"_error": str(e), "_raw": str(tc)[:500]},
                     )
                 )
 

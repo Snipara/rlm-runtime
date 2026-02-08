@@ -24,17 +24,27 @@ console = Console()
 @app.command()
 def run(
     prompt: str = typer.Argument(..., help="The prompt to execute"),
-    model: str = typer.Option("gpt-4o-mini", "--model", "-m", help="Model to use"),
-    backend: str = typer.Option("litellm", "--backend", "-b", help="Backend provider"),
-    environment: str = typer.Option("local", "--env", "-e", help="REPL environment (local/docker)"),
-    max_depth: int = typer.Option(4, "--max-depth", "-d", help="Max recursion depth"),
-    token_budget: int = typer.Option(8000, "--token-budget", "-t", help="Token budget"),
+    model: str | None = typer.Option(
+        None, "--model", "-m", help="Model to use (default: from config)"
+    ),
+    backend: str | None = typer.Option(
+        None, "--backend", "-b", help="Backend provider (default: from config)"
+    ),
+    environment: str | None = typer.Option(
+        None, "--env", "-e", help="REPL environment (default: from config)"
+    ),
+    max_depth: int | None = typer.Option(None, "--max-depth", "-d", help="Max recursion depth"),
+    token_budget: int | None = typer.Option(None, "--token-budget", "-t", help="Token budget"),
+    timeout: int | None = typer.Option(None, "--timeout", help="Timeout in seconds"),
     system: str | None = typer.Option(None, "--system", "-s", help="System message"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
     config_file: Path | None = typer.Option(None, "--config", "-c", help="Config file path"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
     sub_calls: bool = typer.Option(True, "--sub-calls/--no-sub-calls", help="Enable sub-LLM calls"),
-    max_sub_calls: int = typer.Option(5, "--max-sub-calls", help="Max sub-calls per turn"),
+    max_sub_calls: int | None = typer.Option(
+        None, "--max-sub-calls", help="Max sub-calls per turn"
+    ),
+    show_config: bool = typer.Option(False, "--show-config", help="Show effective config and exit"),
 ) -> None:
     """Run a recursive completion with the RLM runtime."""
     from rlm.core.config import load_config
@@ -42,14 +52,42 @@ def run(
     from rlm.core.types import CompletionOptions
 
     config = load_config(config_file)
-    config.sub_calls_enabled = sub_calls
-    config.sub_calls_max_per_turn = max_sub_calls
+
+    # CLI overrides config only when explicitly set
+    if sub_calls is not None:
+        config.sub_calls_enabled = sub_calls
+    if max_sub_calls is not None:
+        config.sub_calls_max_per_turn = max_sub_calls
+
+    # Use config values as defaults, CLI args override
+    effective_model = model or config.model
+    effective_backend = backend or config.backend
+    effective_environment = environment or config.environment
+    effective_max_depth = max_depth if max_depth is not None else config.max_depth
+    effective_token_budget = token_budget if token_budget is not None else config.token_budget
+    effective_timeout = timeout if timeout is not None else config.timeout_seconds
+
+    # Show effective config if requested
+    if show_config or verbose:
+        console.print("[bold]Effective Configuration:[/bold]")
+        console.print(f"  Model: {effective_model}")
+        console.print(f"  Backend: {effective_backend}")
+        console.print(f"  Environment: {effective_environment}")
+        console.print(f"  Max Depth: {effective_max_depth}")
+        console.print(f"  Token Budget: {effective_token_budget}")
+        console.print(f"  Timeout: {effective_timeout}s")
+        console.print(f"  Sub-calls: {config.sub_calls_enabled}")
+        if config.snipara_project_slug:
+            console.print(f"  Snipara Project: {config.snipara_project_slug}")
+        console.print()
+        if show_config:
+            return
 
     try:
         rlm = RLM(
-            backend=backend,
-            model=model,
-            environment=environment,
+            backend=effective_backend,
+            model=effective_model,
+            environment=effective_environment,
             config=config,
             verbose=verbose,
         )
@@ -58,8 +96,9 @@ def run(
         raise typer.Exit(1) from None
 
     options = CompletionOptions(
-        max_depth=max_depth,
-        token_budget=token_budget,
+        max_depth=effective_max_depth,
+        token_budget=effective_token_budget,
+        timeout_seconds=effective_timeout,
         include_trajectory=verbose,
     )
 
@@ -93,19 +132,26 @@ def run(
 @app.command()
 def agent(
     task: str = typer.Argument(..., help="The task to solve"),
-    model: str = typer.Option("gpt-4o-mini", "--model", "-m", help="Model to use"),
-    backend: str = typer.Option("litellm", "--backend", "-b", help="Backend provider"),
-    environment: str = typer.Option("local", "--env", "-e", help="REPL environment (local/docker)"),
+    model: str | None = typer.Option(
+        None, "--model", "-m", help="Model to use (default: from config)"
+    ),
+    backend: str | None = typer.Option(
+        None, "--backend", "-b", help="Backend provider (default: from config)"
+    ),
+    environment: str | None = typer.Option(
+        None, "--env", "-e", help="REPL environment (default: from config)"
+    ),
     max_iterations: int = typer.Option(10, "--max-iterations", "-i", help="Max agent iterations"),
-    token_budget: int = typer.Option(50000, "--budget", help="Token budget"),
+    token_budget: int | None = typer.Option(None, "--budget", help="Token budget (default: 50000)"),
     cost_limit: float = typer.Option(2.0, "--cost-limit", help="Cost limit in USD"),
-    timeout: int = typer.Option(120, "--timeout", help="Timeout in seconds"),
+    timeout: int | None = typer.Option(None, "--timeout", help="Timeout in seconds (default: 300)"),
     auto_context: bool = typer.Option(
         True, "--auto-context/--no-auto-context", help="Auto-load Snipara context"
     ),
     config_file: Path | None = typer.Option(None, "--config", "-c", help="Config file path"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    show_config: bool = typer.Option(False, "--show-config", help="Show effective config and exit"),
 ) -> None:
     """Run an autonomous agent that iteratively solves a task.
 
@@ -120,11 +166,34 @@ def agent(
 
     config = load_config(config_file)
 
+    # Use config values as defaults, CLI args override
+    effective_model = model or config.model
+    effective_backend = backend or config.backend
+    effective_environment = environment or config.environment
+    effective_token_budget = token_budget if token_budget is not None else 50000
+    effective_timeout = timeout if timeout is not None else 300  # 5 minutes for agents
+
+    # Show effective config if requested
+    if show_config or verbose:
+        console.print("[bold]Effective Configuration:[/bold]")
+        console.print(f"  Model: {effective_model}")
+        console.print(f"  Backend: {effective_backend}")
+        console.print(f"  Environment: {effective_environment}")
+        console.print(f"  Token Budget: {effective_token_budget}")
+        console.print(f"  Cost Limit: ${cost_limit}")
+        console.print(f"  Timeout: {effective_timeout}s")
+        console.print(f"  Max Iterations: {max_iterations}")
+        if config.snipara_project_slug:
+            console.print(f"  Snipara Project: {config.snipara_project_slug}")
+        console.print()
+        if show_config:
+            return
+
     try:
         rlm = RLM(
-            backend=backend,
-            model=model,
-            environment=environment,
+            backend=effective_backend,
+            model=effective_model,
+            environment=effective_environment,
             config=config,
             verbose=verbose,
         )
@@ -134,9 +203,9 @@ def agent(
 
     agent_config = AgentConfig(
         max_iterations=max_iterations,
-        token_budget=token_budget,
+        token_budget=effective_token_budget,
         cost_limit=cost_limit,
-        timeout_seconds=timeout,
+        timeout_seconds=effective_timeout,
         auto_context=auto_context,
         trajectory_log=verbose,
     )

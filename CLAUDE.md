@@ -943,6 +943,7 @@ pip install dist/rlm_runtime-0.2.0-py3-none-any.whl
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1.1 | Feb 2025 | Bug fixes: tool call parsing, CLI config priority, auto-enable memory, increased timeout |
 | 2.1.0 | Feb 2025 | Quality hardening: anti-hallucination grounding, test coverage 80%→84%, datetime deprecation fixes |
 | 2.0.0 | Jan 2025 | Major release: persistent sessions, execution profiles, path security, caching |
 | 0.2.0 | Jan 2025 | Cost tracking, budget enforcement, resource monitoring |
@@ -1093,6 +1094,24 @@ rlm agent "Count files" --json
 See [docs/autonomous-agent.md](docs/autonomous-agent.md) for full specification.
 
 ## Recent Changes
+
+### February 2025 (v2.1.1) — Bug Fixes & CLI Improvements
+
+- **Tool Call Argument Parsing Fix**: Fixed critical bug where `execute_code` tool would fail with "missing 1 required positional argument: 'code'" when LLM returned empty or malformed arguments. Now handles `None`, empty string `""`, dict, and malformed JSON gracefully with proper error logging.
+- **Config Loading Priority**: CLI now properly respects `rlm.toml` configuration. Changed CLI defaults from hardcoded values to `None`, implementing correct priority: CLI args > rlm.toml > defaults.
+- **Auto-enable Memory Tools**: Memory tools (`rlm_remember`, `rlm_recall`, etc.) are now automatically enabled when OAuth tokens are detected, without requiring explicit `memory_enabled=true` in config.
+- **Increased Default Timeout**: Changed default `timeout_seconds` from 120s (2 min) to 300s (5 min) for better support of complex agentic tasks.
+- **New `--show-config` Flag**: Added `--show-config` flag to `run` and `agent` commands to display effective configuration (merged CLI + rlm.toml). Verbose mode (`-v`) also shows config.
+- **Pydantic Warnings Suppressed**: Added warning filter to suppress LiteLLM's internal Pydantic serialization warnings that don't affect functionality.
+
+**Files modified:**
+
+| File | Change |
+|------|--------|
+| `src/rlm/backends/litellm.py` | Robust tool call argument parsing with edge case handling |
+| `src/rlm/cli/main.py` | CLI args now `None` by default, added `--show-config`, `--timeout` flags |
+| `src/rlm/core/config.py` | Default `timeout_seconds` increased to 300 |
+| `src/rlm/core/orchestrator.py` | Auto-enable memory when OAuth detected |
 
 ### February 2025 (v2.1.0) — Quality Hardening
 

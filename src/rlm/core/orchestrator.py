@@ -197,7 +197,25 @@ class RLM:
         1. Native tools via SniparaClient (uses OAuth or API key via auth.py)
         2. snipara-mcp package import (backward compatibility for API key users)
         3. Skip with debug log
+
+        Memory tools are auto-enabled when OAuth tokens are available.
         """
+        # Check if we should auto-enable memory based on OAuth status
+        memory_enabled = self.config.memory_enabled
+        if not memory_enabled:
+            try:
+                from rlm.mcp.auth import get_auth_status
+
+                auth_status = get_auth_status()
+                if auth_status.get("auth_method") == "oauth":
+                    memory_enabled = True
+                    logger.info(
+                        "Auto-enabling memory tools (OAuth detected)",
+                        projects=len(auth_status.get("oauth_projects", [])),
+                    )
+            except Exception:
+                pass  # Ignore auth check failures
+
         # --- Attempt 1: Native tools via SniparaClient ---
         try:
             from rlm.tools.snipara import SniparaClient, get_native_snipara_tools
@@ -206,14 +224,14 @@ class RLM:
             if client is not None:
                 tools = get_native_snipara_tools(
                     client=client,
-                    memory_enabled=self.config.memory_enabled,
+                    memory_enabled=memory_enabled,
                 )
                 for tool in tools:
                     self.tool_registry.register(tool)
                 logger.info(
                     "Snipara tools registered (native HTTP)",
                     count=len(tools),
-                    memory_enabled=self.config.memory_enabled,
+                    memory_enabled=memory_enabled,
                 )
                 return
         except Exception as e:
@@ -238,14 +256,14 @@ class RLM:
             )
             registered = 0
             for tool in tools:
-                if tool.name in memory_tool_names and not self.config.memory_enabled:
+                if tool.name in memory_tool_names and not memory_enabled:
                     continue
                 self.tool_registry.register(tool)
                 registered += 1
             logger.info(
                 "Snipara tools registered (snipara-mcp)",
                 count=registered,
-                memory_enabled=self.config.memory_enabled,
+                memory_enabled=memory_enabled,
             )
         except ImportError:
             logger.debug(

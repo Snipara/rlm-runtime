@@ -97,7 +97,7 @@ class RLMConfig(BaseSettings):
     max_subcalls: int = 12
     token_budget: int = 8000
     tool_budget: int = 20
-    timeout_seconds: int = 120
+    timeout_seconds: int = 300  # 5 minutes default (increased from 2 for agentic tasks)
     parallel_tools: bool = False
     max_parallel: int = 5
 
