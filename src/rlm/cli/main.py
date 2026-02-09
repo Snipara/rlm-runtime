@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
@@ -12,6 +14,9 @@ from rich.table import Table
 
 from rlm import __version__
 
+if TYPE_CHECKING:
+    from rlm.core.config import RLMConfig
+
 app = typer.Typer(
     name="rlm",
     help="Recursive Language Model runtime - execute LLM completions with tool use and sandboxed code execution.",
@@ -19,6 +24,84 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def is_claude_code_context() -> bool:
+    """Detect if running inside Claude Code / Claude Desktop.
+
+    Checks for environment variables and signals that indicate
+    we're running in Claude's context (as an MCP tool or via Bash).
+
+    Returns:
+        True if running inside Claude Code environment
+    """
+    # Check for Claude Code-specific environment variables
+    if os.environ.get("CLAUDE_CODE"):
+        return True
+
+    # Check for MCP-related environment
+    if os.environ.get("MCP_SERVER_NAME"):
+        return True
+
+    # Check for Claude Desktop / Code terminal indicator
+    term_program = os.environ.get("TERM_PROGRAM", "").lower()
+    if "claude" in term_program:
+        return True
+
+    # Check for RLM_CLAUDE_CODE_MODE (explicit opt-in)
+    return bool(os.environ.get("RLM_CLAUDE_CODE_MODE"))
+
+
+def has_llm_api_keys(config: RLMConfig | None = None) -> bool:
+    """Check if any LLM API keys are available.
+
+    Args:
+        config: Optional RLMConfig to check for API key
+
+    Returns:
+        True if at least one API key is set
+    """
+    # Check environment variables
+    env_keys = bool(
+        os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("ANTHROPIC_API_KEY")
+        or os.environ.get("GOOGLE_API_KEY")
+        or os.environ.get("MISTRAL_API_KEY")
+        or os.environ.get("AZURE_API_KEY")
+        or os.environ.get("OPENROUTER_API_KEY")
+    )
+
+    # Check config file (if provided)
+    config_key = False
+    if config:
+        config_key = bool(
+            getattr(config, "openai_api_key", None) or getattr(config, "api_key", None)
+        )
+
+    return env_keys or config_key
+
+
+def show_claude_code_guidance() -> None:
+    """Show guidance for using RLM within Claude Code."""
+    console.print()
+    console.print(
+        Panel(
+            "[bold yellow]Running inside Claude Code without LLM API keys[/bold yellow]\n\n"
+            "The [cyan]rlm run[/cyan] and [cyan]rlm agent[/cyan] commands require an external LLM backend.\n"
+            "Since you're inside Claude Code, you have two options:\n\n"
+            "[bold]Option 1: Use MCP Tools (Recommended)[/bold]\n"
+            "Claude Code already provides these tools - no API keys needed:\n"
+            "  • [green]execute_python[/green] - Run code in sandboxed REPL\n"
+            "  • [green]rlm_agent_run[/green] - Start autonomous agent task\n"
+            "  • [green]rlm_context_query[/green] - Query Snipara documentation\n\n"
+            "[bold]Option 2: Set API Keys[/bold]\n"
+            "  [dim]export OPENAI_API_KEY=sk-...[/dim]\n"
+            "  [dim]export ANTHROPIC_API_KEY=sk-ant-...[/dim]\n\n"
+            "[dim]Tip: Run 'rlm doctor' to check your setup[/dim]",
+            title="Claude Code Mode",
+            border_style="yellow",
+        )
+    )
 
 
 @app.command()
@@ -52,6 +135,11 @@ def run(
     from rlm.core.types import CompletionOptions
 
     config = load_config(config_file)
+
+    # Check for Claude Code context without API keys
+    if not has_llm_api_keys(config) and is_claude_code_context():
+        show_claude_code_guidance()
+        raise typer.Exit(1)
 
     # CLI overrides config only when explicitly set
     if sub_calls is not None:
@@ -165,6 +253,11 @@ def agent(
     from rlm.core.orchestrator import RLM
 
     config = load_config(config_file)
+
+    # Check for Claude Code context without API keys
+    if not has_llm_api_keys(config) and is_claude_code_context():
+        show_claude_code_guidance()
+        raise typer.Exit(1)
 
     # Use config values as defaults, CLI args override
     effective_model = model or config.model

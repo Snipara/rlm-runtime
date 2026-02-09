@@ -1152,13 +1152,14 @@ See [docs/autonomous-agent.md](docs/autonomous-agent.md) for full specification.
 - **Increased Default Timeout**: Changed default `timeout_seconds` from 120s (2 min) to 300s (5 min) for better support of complex agentic tasks.
 - **New `--show-config` Flag**: Added `--show-config` flag to `run` and `agent` commands to display effective configuration (merged CLI + rlm.toml). Verbose mode (`-v`) also shows config.
 - **Pydantic Warnings Suppressed**: Added warning filter to suppress LiteLLM's internal Pydantic serialization warnings that don't affect functionality.
+- **Claude Code Context Detection**: CLI now detects when running inside Claude Code without API keys and provides helpful guidance. Detects via `CLAUDE_CODE`, `MCP_SERVER_NAME`, or `RLM_CLAUDE_CODE_MODE` environment variables. When detected without API keys, shows a panel explaining that users should use MCP tools (`execute_python`, `rlm_agent_run`) instead of CLI commands.
 
 **Files modified:**
 
 | File | Change |
 |------|--------|
 | `src/rlm/backends/litellm.py` | Robust tool call argument parsing with edge case handling |
-| `src/rlm/cli/main.py` | CLI args now `None` by default, added `--show-config`, `--timeout` flags |
+| `src/rlm/cli/main.py` | CLI args now `None` by default, added `--show-config`, `--timeout` flags, Claude Code detection |
 | `src/rlm/core/config.py` | Default `timeout_seconds` increased to 300 |
 | `src/rlm/core/orchestrator.py` | Auto-enable memory when OAuth detected |
 
