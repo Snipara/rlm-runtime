@@ -2,10 +2,12 @@
 
 from rlm.repl.base import BaseREPL
 from rlm.repl.local import LocalREPL
+from rlm.repl.localdev import LocalDevREPL
 
 __all__ = [
     "BaseREPL",
     "LocalREPL",
+    "LocalDevREPL",
 ]
 
 # Docker REPL is optional - only import if docker package is available

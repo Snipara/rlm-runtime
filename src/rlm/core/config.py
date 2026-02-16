@@ -86,6 +86,7 @@ class RLMConfig(BaseSettings):
 
     # Environment settings
     environment: str = "local"
+    trust_level: str = "sandboxed"  # sandboxed | docker | local
     docker_image: str = "python:3.11-slim"
     docker_cpus: float = 1.0
     docker_memory: str = "512m"

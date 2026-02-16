@@ -35,8 +35,9 @@ from mcp.types import (
     Tool,
 )
 
-from rlm.core.config import EXECUTION_PROFILES
+from rlm.core.config import EXECUTION_PROFILES, load_config
 from rlm.repl.local import LocalREPL
+from rlm.repl.localdev import LocalDevREPL
 
 # Default session TTL: 30 minutes
 DEFAULT_SESSION_TTL = 30 * 60
@@ -47,7 +48,8 @@ class Session:
     """A REPL session with metadata."""
 
     id: str
-    repl: LocalREPL
+    repl: LocalREPL | LocalDevREPL
+    trust_level: str = "sandboxed"
     created_at: float = field(default_factory=time.time)
     last_access: float = field(default_factory=time.time)
 
@@ -63,15 +65,25 @@ class Session:
 class SessionManager:
     """Manages multiple REPL sessions with TTL-based cleanup."""
 
-    def __init__(self, ttl: float = DEFAULT_SESSION_TTL):
+    def __init__(self, ttl: float = DEFAULT_SESSION_TTL, trust_level: str = "sandboxed"):
         self._sessions: dict[str, Session] = {}
         self._ttl = ttl
+        self._trust_level = trust_level
         self._default_session_id = "default"
         # Create default session
         self._sessions[self._default_session_id] = Session(
             id=self._default_session_id,
-            repl=LocalREPL(timeout=30),
+            repl=self._create_repl(),
+            trust_level=self._trust_level,
         )
+
+    def _create_repl(self) -> LocalREPL | LocalDevREPL:
+        """Create a REPL based on trust level."""
+        if self._trust_level == "local":
+            return LocalDevREPL(timeout=300, audit_log=True)
+        else:
+            # Default to sandboxed (RestrictedPython)
+            return LocalREPL(timeout=30)
 
     def get_or_create(self, session_id: str | None = None) -> Session:
         """Get existing session or create new one."""
@@ -83,7 +95,8 @@ class SessionManager:
         if session_id not in self._sessions:
             self._sessions[session_id] = Session(
                 id=session_id,
-                repl=LocalREPL(timeout=30),
+                repl=self._create_repl(),
+                trust_level=self._trust_level,
             )
 
         session = self._sessions[session_id]
@@ -103,10 +116,16 @@ class SessionManager:
             # Reset default session instead of destroying
             self._sessions[self._default_session_id] = Session(
                 id=self._default_session_id,
-                repl=LocalREPL(timeout=30),
+                repl=self._create_repl(),
+                trust_level=self._trust_level,
             )
             return True
         return self._sessions.pop(session_id, None) is not None
+
+    @property
+    def trust_level(self) -> str:
+        """Get current trust level."""
+        return self._trust_level
 
     def list_sessions(self) -> list[dict[str, Any]]:
         """List all active sessions with metadata."""
@@ -115,6 +134,7 @@ class SessionManager:
         return [
             {
                 "id": s.id,
+                "trust_level": s.trust_level,
                 "created_at": s.created_at,
                 "last_access": s.last_access,
                 "age_seconds": int(now - s.created_at),
@@ -208,8 +228,15 @@ def create_server() -> Server:
     """Create and configure the MCP server with code sandbox tools."""
     server = Server("rlm-runtime")
 
+    # Load config to get trust_level
+    try:
+        config = load_config()
+        trust_level = config.trust_level
+    except Exception:
+        trust_level = "sandboxed"
+
     # Session manager for multi-session support
-    sessions = SessionManager()
+    sessions = SessionManager(trust_level=trust_level)
     agents = AgentManager()
 
     @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
@@ -219,16 +246,16 @@ def create_server() -> Server:
             Tool(
                 name="execute_python",
                 description=(
-                    "Execute Python code in a sandboxed environment with RestrictedPython. "
-                    "Safe for math, data processing, and algorithm work. "
-                    "Allowed imports: json, re, math, datetime, collections, itertools, "
-                    "functools, operator, string, random, hashlib, base64, urllib.parse. "
-                    "Blocked: os, subprocess, socket, file I/O, network access. "
+                    "Execute Python code in a sandboxed environment. "
+                    "Trust level determines capabilities:\n"
+                    "- sandboxed (default): RestrictedPython, safe stdlib only\n"
+                    "- local: Full access to files, subprocess, network, any library\n\n"
+                    "In sandboxed mode: json, re, math, datetime, collections, itertools allowed. "
+                    "In local mode: Full Python environment with project libraries.\n\n"
                     "Use 'result = <value>' to return a value. Use print() for output. "
-                    "Context persists across calls - variables defined remain available. "
-                    "Use session_id to maintain separate contexts for different tasks. "
-                    "Use profile to set resource limits: quick (5s), default (30s), "
-                    "analysis (120s), extended (300s)."
+                    "Context persists across calls. "
+                    "Use session_id for separate contexts. "
+                    "Profiles: quick (5s), default (30s), analysis (120s), extended (300s)."
                 ),
                 inputSchema={
                     "type": "object",
@@ -411,7 +438,7 @@ def create_server() -> Server:
 
         if name == "execute_python":
             session = sessions.get_or_create(session_id)
-            return await _execute_python(session.repl, arguments)
+            return await _execute_python(session.repl, arguments, session.trust_level)
 
         elif name == "get_repl_context":
             session = sessions.get_or_create(session_id)
@@ -449,8 +476,10 @@ def create_server() -> Server:
     return server
 
 
-async def _execute_python(repl: LocalREPL, arguments: dict[str, Any]) -> CallToolResult:
-    """Execute Python code in the sandbox."""
+async def _execute_python(
+    repl: LocalREPL | LocalDevREPL, arguments: dict[str, Any], trust_level: str = "sandboxed"
+) -> CallToolResult:
+    """Execute Python code in the sandbox or local dev environment."""
     code = arguments.get("code", "")
 
     # Determine timeout from profile or explicit value
@@ -471,12 +500,16 @@ async def _execute_python(repl: LocalREPL, arguments: dict[str, Any]) -> CallToo
         output = result.output or "(no output)"
         if result.truncated:
             output += "\n... (output truncated)"
+        # Add trust level indicator for local mode
+        if trust_level == "local":
+            output = f"[local mode] {output}"
         return CallToolResult(
             content=[TextContent(type="text", text=output)],
         )
     else:
+        error_prefix = "[local mode] " if trust_level == "local" else ""
         return CallToolResult(
-            content=[TextContent(type="text", text=f"Error: {result.error}")],
+            content=[TextContent(type="text", text=f"{error_prefix}Error: {result.error}")],
             isError=True,
         )
 
@@ -546,10 +579,13 @@ async def _list_sessions(sessions: SessionManager) -> CallToolResult:
         )
 
     lines = [f"Active sessions ({len(session_list)}):"]
+    lines.append(f"Trust level: {sessions.trust_level}")
+    lines.append("")
     for s in session_list:
         context_info = f", context: {s['context_keys']}" if s["context_keys"] else ""
+        trust_indicator = " [LOCAL]" if s["trust_level"] == "local" else ""
         lines.append(
-            f"  - {s['id']}: idle {s['idle_seconds']}s, age {s['age_seconds']}s{context_info}"
+            f"  - {s['id']}{trust_indicator}: idle {s['idle_seconds']}s, age {s['age_seconds']}s{context_info}"
         )
 
     return CallToolResult(

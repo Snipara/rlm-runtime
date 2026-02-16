@@ -1,0 +1,49 @@
+{
+  "name": "@rlm/runtime",
+  "version": "2.2.0",
+  "description": "TypeScript SDK for RLM Runtime - Sandboxed Python execution for AI agents",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "claude",
+    "mcp",
+    "repl",
+    "sandbox",
+    "python",
+    "agent",
+    "typescript"
+  ],
+  "author": "RLM Runtime Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/rlm-runtime.git",
+    "directory": "npm-package"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

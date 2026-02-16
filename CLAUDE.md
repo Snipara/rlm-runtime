@@ -42,6 +42,7 @@ src/rlm/
 │   └── litellm.py           # LiteLLM (unified backend for all providers)
 ├── repl/                    # Code execution environments
 │   ├── local.py             # RestrictedPython sandbox
+│   ├── localdev.py          # Unrestricted local dev mode
 │   ├── docker.py            # Docker container isolation (with resource reporting)
 │   └── wasm.py              # WebAssembly via Pyodide
 ├── mcp/                     # MCP server for Claude Code
@@ -117,6 +118,62 @@ repl = LocalREPL(timeout=30)
 result = await repl.execute("print(sum(range(100)))")
 print(result.output)  # "4950\n"
 print(f"CPU: {result.cpu_time_ms}ms, Memory: {result.memory_peak_bytes} bytes")
+```
+
+### Local Dev Mode (Unrestricted)
+
+**File:** `src/rlm/repl/localdev.py`
+
+Unrestricted Python execution for local development:
+
+| Aspect | Details |
+|--------|---------|
+| **Isolation** | None - full system access |
+| **Mechanism** | Standard Python `exec()` with stdout/stderr capture |
+| **Import restrictions** | None - any installed package allowed |
+| **File access** | Full read/write access |
+| **Network** | Full network access |
+| **Subprocess** | Full subprocess access |
+| **Performance** | Fast (~0ms startup) - runs in same process |
+| **Setup** | Requires `trust_level = "local"` in config |
+| **Audit logging** | All executions logged for security |
+| **Context storage** | Python objects stored directly in `_context` dict |
+
+**Security warning:** Only use for local development with trusted code. Never expose to untrusted input.
+
+```python
+from rlm.repl.localdev import LocalDevREPL
+
+repl = LocalDevREPL(
+    working_dir="/path/to/project",
+    audit_log=True,
+)
+
+# Full access to os, subprocess, files, network
+result = await repl.execute("""
+import subprocess
+output = subprocess.run(['ls', '-la'], capture_output=True, text=True)
+print(output.stdout)
+""")
+
+# Convenience methods
+await repl.run_shell("npm install")
+await repl.read_file("package.json")
+await repl.write_file("output.txt", "Hello!")
+```
+
+**Configuration:**
+
+```toml
+# rlm.toml
+[rlm]
+trust_level = "local"  # Enable unrestricted mode
+```
+
+Or via environment variable:
+
+```bash
+export RLM_TRUST_LEVEL=local
 ```
 
 ### Docker Mode (Container Isolation)
@@ -1143,6 +1200,27 @@ rlm agent "Count files" --json
 See [docs/autonomous-agent.md](docs/autonomous-agent.md) for full specification.
 
 ## Recent Changes
+
+### February 2025 (v2.2.0) — Local Dev Mode & npm Package
+
+**New Features:**
+
+- **Local Dev Mode (LocalDevREPL)**: New unrestricted execution environment for local development. Unlike sandboxed mode, this allows full access to files, subprocess, network, and any installed library. Requires explicit opt-in via `trust_level = "local"` in config.
+- **Trust Level Configuration**: New `trust_level` config option (`sandboxed` | `docker` | `local`) to control execution environment capabilities.
+- **TypeScript SDK**: New `@rlm/runtime` npm package with type definitions for all MCP tools, execution profiles, and configuration types.
+- **Audit Logging**: LocalDevREPL logs all code executions for security audit trail.
+- **Project-Aware Execution**: LocalDevREPL auto-detects virtual environments and adds project directory to Python path.
+
+**Files added/modified:**
+
+| File | Change |
+|------|--------|
+| `src/rlm/repl/localdev.py` | New LocalDevREPL class for unrestricted execution |
+| `src/rlm/repl/__init__.py` | Export LocalDevREPL |
+| `src/rlm/core/config.py` | Added `trust_level` configuration option |
+| `src/rlm/mcp/server.py` | Support trust_level, show [local mode] indicator |
+| `tests/unit/test_repl_localdev.py` | 23 new tests for LocalDevREPL |
+| `npm-package/` | TypeScript SDK package |
 
 ### February 2025 (v2.1.1) — Bug Fixes & CLI Improvements
 
