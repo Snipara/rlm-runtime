@@ -20,6 +20,55 @@ class TestVersionCommand:
         assert result.exit_code == 0
         assert "rlm-runtime" in result.stdout
 
+
+class TestConfigCommand:
+    """Tests for config command."""
+
+    @patch("rlm.core.config.load_project_env", return_value=None)
+    @patch("rlm.core.config.load_config")
+    def test_shows_effective_configuration(self, mock_load_config, _mock_load_project_env, tmp_path):
+        """Should show the effective configuration."""
+        from rlm.core.config import RLMConfig
+
+        mock_load_config.return_value = RLMConfig.model_construct(
+            model="test-model",
+            api_key="sk-test",
+            snipara_api_key="rlm_test",
+            snipara_project_slug="demo-project",
+        )
+
+        result = runner.invoke(app, ["config", "show", "--config", str(tmp_path / "rlm.toml")])
+
+        assert result.exit_code == 0
+        assert "Effective Configuration" in result.stdout
+        assert "test-model" in result.stdout
+        assert "demo-project" in result.stdout
+
+    @patch("rlm.core.config.load_project_env", return_value=None)
+    @patch("rlm.core.config.load_config")
+    def test_json_output(self, mock_load_config, _mock_load_project_env, tmp_path):
+        """Should output JSON for config show."""
+        from rlm.core.config import RLMConfig
+
+        config_path = tmp_path / "rlm.toml"
+        mock_load_config.return_value = RLMConfig.model_construct(
+            model="json-model",
+            api_key="sk-test",
+            snipara_api_key="rlm_test",
+            snipara_project_slug="json-project",
+        )
+
+        result = runner.invoke(
+            app,
+            ["config", "show", "--config", str(config_path), "--json"],
+        )
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["config_file"] == str(config_path)
+        assert data["model"] == "json-model"
+        assert data["snipara_enabled"] is True
+
     def test_root_version_flag(self):
         """Should support the root --version flag."""
         result = runner.invoke(app, ["--version"])

@@ -16,6 +16,10 @@ rlm init
 
 # Check your setup
 rlm doctor
+
+# Inspect the effective configuration
+rlm config show
+rlm config show --json
 ```
 
 ## Configuration File

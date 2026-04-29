@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.1.3] - 2026-04-29
+
+### Added
+
+- `rlm config show` for inspecting the effective runtime configuration.
+- `--json` output for `rlm config show`.
+
+### Changed
+
+- Added documentation links for the config inspection command in the README and configuration guide.
+- Bumped the package version to `2.1.3` for release.
+
 ## [2.1.2] - 2026-04-29
 
 ### Fixed

@@ -478,6 +478,18 @@ Initialize RLM configuration.
 - `--path` - Config file path
 - `--env` - Default environment
 
+### rlm config show
+
+```bash
+rlm config show [OPTIONS]
+```
+
+Show the effective runtime configuration.
+
+**Options:**
+- `--config, -c` - Config file path
+- `--json` - Output machine-readable JSON
+
 ### rlm logs
 
 ```bash

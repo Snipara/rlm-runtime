@@ -28,6 +28,11 @@ app = typer.Typer(
     add_completion=True,
     no_args_is_help=True,
 )
+config_app = typer.Typer(
+    name="config",
+    help="Inspect effective configuration and defaults.",
+    no_args_is_help=True,
+)
 console = Console()
 
 
@@ -50,6 +55,145 @@ def _version_string() -> str:
     if installed_version and installed_version != __version__:
         version_text += f" (installed: {installed_version})"
     return version_text
+
+
+def _config_show_payload(config: RLMConfig, config_file: Path) -> dict[str, object]:
+    """Build a JSON-friendly snapshot of the effective configuration."""
+    # `.env` loading is handled by `load_config`; the helper below only records
+    # whether a project-level file was found for display purposes.
+    from rlm.core.config import load_project_env
+
+    env_path = load_project_env(config_file.parent)
+
+    return {
+        "config_file": str(config_file),
+        "config_file_exists": config_file.exists(),
+        "project_env_file": str(env_path) if env_path else None,
+        "project_env_file_exists": env_path is not None,
+        "backend": config.backend,
+        "model": config.model,
+        "temperature": config.temperature,
+        "environment": config.environment,
+        "trust_level": config.trust_level,
+        "docker_image": config.docker_image,
+        "docker_cpus": config.docker_cpus,
+        "docker_memory": config.docker_memory,
+        "docker_network_disabled": config.docker_network_disabled,
+        "docker_timeout": config.docker_timeout,
+        "max_depth": config.max_depth,
+        "max_subcalls": config.max_subcalls,
+        "token_budget": config.token_budget,
+        "tool_budget": config.tool_budget,
+        "timeout_seconds": config.timeout_seconds,
+        "parallel_tools": config.parallel_tools,
+        "max_parallel": config.max_parallel,
+        "sub_calls_enabled": config.sub_calls_enabled,
+        "sub_calls_max_per_turn": config.sub_calls_max_per_turn,
+        "sub_calls_budget_inheritance": config.sub_calls_budget_inheritance,
+        "sub_calls_max_cost_per_session": config.sub_calls_max_cost_per_session,
+        "allowed_paths": [str(path) for path in config.allowed_paths],
+        "log_dir": str(config.log_dir),
+        "verbose": config.verbose,
+        "log_level": config.log_level,
+        "api_key_set": bool(config.api_key),
+        "snipara_enabled": config.snipara_enabled,
+        "snipara_api_key_set": bool(config.snipara_api_key),
+        "snipara_project_slug": config.snipara_project_slug,
+        "snipara_base_url": config.snipara_base_url,
+        "memory_enabled": config.memory_enabled,
+    }
+
+
+def _config_show_rows(payload: dict[str, object]) -> list[tuple[str, str, str]]:
+    """Render the configuration snapshot as table rows."""
+
+    def _status(value: bool) -> str:
+        return "yes" if value else "no"
+
+    def _path_status(found_key: str, path_key: str) -> str:
+        if payload.get(found_key):
+            return str(payload.get(path_key))
+        return "not found"
+
+    def _list_value(key: str) -> str:
+        items = payload.get(key, [])
+        if isinstance(items, list) and items:
+            return ", ".join(str(item) for item in items)
+        return "[]"
+
+    return [
+        ("Source", "Config file", _path_status("config_file_exists", "config_file")),
+        (
+            "Source",
+            "Project .env",
+            _path_status("project_env_file_exists", "project_env_file"),
+        ),
+        ("Runtime", "Backend", str(payload.get("backend", ""))),
+        ("Runtime", "Model", str(payload.get("model", ""))),
+        ("Runtime", "Temperature", str(payload.get("temperature", ""))),
+        ("Runtime", "Environment", str(payload.get("environment", ""))),
+        ("Runtime", "Trust level", str(payload.get("trust_level", ""))),
+        ("Docker", "Image", str(payload.get("docker_image", ""))),
+        ("Docker", "CPUs", str(payload.get("docker_cpus", ""))),
+        ("Docker", "Memory", str(payload.get("docker_memory", ""))),
+        (
+            "Docker",
+            "Network disabled",
+            _status(bool(payload.get("docker_network_disabled", False))),
+        ),
+        ("Limits", "Max depth", str(payload.get("max_depth", ""))),
+        ("Limits", "Max subcalls", str(payload.get("max_subcalls", ""))),
+        ("Limits", "Token budget", str(payload.get("token_budget", ""))),
+        ("Limits", "Tool budget", str(payload.get("tool_budget", ""))),
+        ("Limits", "Timeout seconds", str(payload.get("timeout_seconds", ""))),
+        ("Limits", "Parallel tools", _status(bool(payload.get("parallel_tools", False)))),
+        ("Limits", "Max parallel", str(payload.get("max_parallel", ""))),
+        (
+            "Sub-calls",
+            "Enabled",
+            _status(bool(payload.get("sub_calls_enabled", False))),
+        ),
+        (
+            "Sub-calls",
+            "Max per turn",
+            str(payload.get("sub_calls_max_per_turn", "")),
+        ),
+        (
+            "Sub-calls",
+            "Budget inheritance",
+            str(payload.get("sub_calls_budget_inheritance", "")),
+        ),
+        (
+            "Sub-calls",
+            "Max cost/session",
+            str(payload.get("sub_calls_max_cost_per_session", "")),
+        ),
+        ("Security", "Allowed paths", _list_value("allowed_paths")),
+        ("Security", "Provider API key", _status(bool(payload.get("api_key_set", False)))),
+        ("Logging", "Log dir", str(payload.get("log_dir", ""))),
+        ("Logging", "Verbose", _status(bool(payload.get("verbose", False)))),
+        ("Logging", "Log level", str(payload.get("log_level", ""))),
+        (
+            "Snipara",
+            "Enabled",
+            _status(bool(payload.get("snipara_enabled", False))),
+        ),
+        (
+            "Snipara",
+            "Project slug",
+            str(payload.get("snipara_project_slug")) if payload.get("snipara_project_slug") else "not set",
+        ),
+        ("Snipara", "Base URL", str(payload.get("snipara_base_url", ""))),
+        (
+            "Snipara",
+            "API key",
+            _status(bool(payload.get("snipara_api_key_set", False))),
+        ),
+        ("Snipara", "Memory enabled", _status(bool(payload.get("memory_enabled", False)))),
+    ]
+
+
+app.add_typer(config_app, name="config")
 
 
 def is_claude_code_context() -> bool:
@@ -98,6 +242,36 @@ def main(
 
     if ctx.invoked_subcommand is None and ctx.command is not None:
         return
+
+
+@config_app.command("show")
+def config_show(
+    config_file: Path | None = typer.Option(None, "--config", "-c", help="Config file path"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Show the effective runtime configuration."""
+    from rlm.core.config import load_config
+
+    config_path = config_file or Path("rlm.toml")
+    config = load_config(config_file)
+    payload = _config_show_payload(config, config_path)
+
+    if json_output:
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console.print("[bold]Effective Configuration[/bold]")
+    console.print()
+
+    table = Table()
+    table.add_column("Section", style="cyan")
+    table.add_column("Setting", style="magenta")
+    table.add_column("Value", style="green")
+
+    for section, setting, value in _config_show_rows(payload):
+        table.add_row(section, setting, value)
+
+    console.print(table)
 
 
 def has_llm_api_keys(config: RLMConfig | None = None) -> bool:

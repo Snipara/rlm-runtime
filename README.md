@@ -6,7 +6,7 @@ RLM Runtime enables LLMs to recursively decompose tasks, execute real code in is
 
 ## Release Notes
 
-Current published version: `2.1.2`
+Current published version: `2.1.3`
 
 Highlights in this release:
 
@@ -15,6 +15,7 @@ Highlights in this release:
 - Project `.env` files are loaded automatically by the CLI and config loader.
 - `--json` output is now clean JSON without debug logs.
 - `--max-depth 0` is rejected immediately with a clear error.
+- `rlm config show` now exposes the effective runtime configuration.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
@@ -259,6 +260,13 @@ export RLM_MODEL=gpt-4o-mini
 export RLM_ENVIRONMENT=docker
 export SNIPARA_API_KEY=rlm_...
 export SNIPARA_PROJECT_SLUG=my-project
+```
+
+Inspect the effective configuration at any time:
+
+```bash
+rlm config show
+rlm config show --json
 ```
 
 ## Environments
