@@ -4,6 +4,20 @@
 
 RLM Runtime enables LLMs to recursively decompose tasks, execute real code in isolated environments, and retrieve context on demand. Instead of simulating computation in tokens, the model executes actual code—cheaper, more reliable, and auditable.
 
+## Release Notes
+
+Current published version: `2.1.2`
+
+Highlights in this release:
+
+- `rlm --version` now works at the root command level.
+- CLI failure states now return non-zero exit codes and preserve the failure reason.
+- Project `.env` files are loaded automatically by the CLI and config loader.
+- `--json` output is now clean JSON without debug logs.
+- `--max-depth 0` is rejected immediately with a clear error.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
 ## Features
 
 - **Recursive Completion** - LLMs can spawn sub-calls, execute code, and aggregate results
