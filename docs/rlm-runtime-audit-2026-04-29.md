@@ -12,6 +12,7 @@ This note records the confirmed issues from the runtime investigation, the fixes
 | Errors returned exit code `0` and `success: true` | Missing OpenAI key and recursion errors were treated as success | Fixed |
 | `--json` was not clean JSON | Debug logs were emitted before the payload | Fixed |
 | `--max-depth 0` was accepted | It failed immediately instead of being rejected up front | Fixed |
+| `rlm config show` was implied by the docs but missing in the CLI | `rlm config --help` had no `show` subcommand | Fixed |
 | `--max-depth 1` was too shallow for trivial prompts | Smoke tests only became reliable at `--max-depth 3` with the environment loaded | Still a behavior limit |
 | Repo MCP config did not include the runtime target | `.mcp.json` only exposed Snipara | Still open |
 
@@ -24,6 +25,7 @@ This note records the confirmed issues from the runtime investigation, the fixes
 - Added early validation for `--max-depth 0`.
 - Made `run` and `agent` return non-zero exit codes when the result is not successful.
 - Captured stdout/stderr during JSON runs so `--json` emits only the final JSON payload.
+- Added a `config` command group with `show` and `show --json` for inspecting the effective runtime configuration.
 
 ### Configuration loading
 
@@ -45,6 +47,7 @@ This note records the confirmed issues from the runtime investigation, the fixes
   - non-zero failure exit codes
   - clean JSON output
   - `--max-depth 0` rejection
+  - `config show` output and JSON snapshot
 - Added config tests for `.env` loading.
 - Added type/result tests so failures without trajectory data still count as failures.
 
@@ -53,6 +56,8 @@ This note records the confirmed issues from the runtime investigation, the fixes
 - `python3 -m pytest tests/unit/test_config.py tests/unit/test_types.py tests/unit/test_cli.py -q`
 - `python3 -m pytest tests/unit/test_orchestrator.py tests/unit/test_sub_llm.py -q`
 - `python3 -m ruff check src/rlm/core/config.py src/rlm/core/types.py src/rlm/core/orchestrator.py src/rlm/cli/main.py tests/unit/test_config.py tests/unit/test_types.py tests/unit/test_cli.py`
+- `rlm config --help`
+- `rlm config show --help`
 
 ## Remaining Notes
 
