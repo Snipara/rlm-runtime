@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -135,6 +137,66 @@ class RLMConfig(BaseSettings):
         return f"{self.snipara_base_url}/{self.snipara_project_slug}"
 
 
+def load_project_env(base_dir: Path | None = None, override: bool = False) -> Path | None:
+    """Load key/value pairs from the nearest `.env` file into `os.environ`.
+
+    This keeps CLI commands and settings loading consistent even when the
+    optional `python-dotenv` dependency is not installed.
+
+    Args:
+        base_dir: Directory to start searching from. Defaults to the current
+            working directory.
+        override: Whether to overwrite existing environment variables.
+
+    Returns:
+        The `.env` path that was loaded, or `None` if no file was found.
+    """
+    search_root = (base_dir or Path.cwd()).resolve()
+
+    for candidate_dir in (search_root, *search_root.parents):
+        env_path = candidate_dir / ".env"
+        if not env_path.exists() or not env_path.is_file():
+            if (candidate_dir / ".git").exists():
+                break
+            continue
+
+        try:
+            lines = env_path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return None
+
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            if line.startswith("export "):
+                line = line[len("export ") :].lstrip()
+
+            lexer = shlex.shlex(line, posix=True)
+            lexer.whitespace_split = True
+            lexer.commenters = "#"
+            tokens = list(lexer)
+            if not tokens:
+                continue
+
+            assignment = " ".join(tokens)
+            if "=" not in assignment:
+                continue
+
+            key, value = assignment.split("=", 1)
+            key = key.strip()
+            if not key:
+                continue
+
+            if override or key not in os.environ:
+                os.environ[key] = value
+
+        return env_path
+
+    return None
+
+
 def load_config(config_path: Path | None = None) -> RLMConfig:
     """Load configuration from file and environment.
 
@@ -150,6 +212,10 @@ def load_config(config_path: Path | None = None) -> RLMConfig:
         RLMConfig instance
     """
     config_data: dict[str, Any] = {}
+
+    # Load project-level `.env` support explicitly so the CLI works without
+    # requiring python-dotenv to be installed.
+    load_project_env(config_path.parent if config_path else Path.cwd())
 
     # Try to load from config file
     if config_path is None:

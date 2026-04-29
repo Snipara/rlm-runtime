@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import json
 import os
+from contextlib import redirect_stderr, redirect_stdout
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as get_distribution_version
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,6 +29,27 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _load_project_env() -> None:
+    """Load the nearest project `.env` file into the process environment."""
+    from rlm.core.config import load_project_env
+
+    load_project_env(Path.cwd())
+
+
+def _version_string() -> str:
+    """Return a human-readable version string with install mismatch details."""
+    installed_version: str | None = None
+    try:
+        installed_version = get_distribution_version("rlm-runtime")
+    except PackageNotFoundError:
+        installed_version = None
+
+    version_text = f"rlm-runtime {__version__}"
+    if installed_version and installed_version != __version__:
+        version_text += f" (installed: {installed_version})"
+    return version_text
 
 
 def is_claude_code_context() -> bool:
@@ -50,6 +76,28 @@ def is_claude_code_context() -> bool:
 
     # Check for RLM_CLAUDE_CODE_MODE (explicit opt-in)
     return bool(os.environ.get("RLM_CLAUDE_CODE_MODE"))
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show version information and exit",
+        is_eager=True,
+    ),
+) -> None:
+    """Top-level CLI callback."""
+    _load_project_env()
+
+    if version:
+        console.print(_version_string())
+        raise typer.Exit()
+
+    if ctx.invoked_subcommand is None and ctx.command is not None:
+        return
 
 
 def has_llm_api_keys(config: RLMConfig | None = None) -> bool:
@@ -134,87 +182,109 @@ def run(
     from rlm.core.orchestrator import RLM
     from rlm.core.types import CompletionOptions
 
-    config = load_config(config_file)
+    def _execute() -> object:
+        config = load_config(config_file)
 
-    # Check for Claude Code context without API keys
-    if not has_llm_api_keys(config) and is_claude_code_context():
-        show_claude_code_guidance()
-        raise typer.Exit(1)
+        # Check for Claude Code context without API keys
+        if not has_llm_api_keys(config) and is_claude_code_context():
+            show_claude_code_guidance()
+            raise RuntimeError("Claude Code context detected without LLM API keys")
 
-    # CLI overrides config only when explicitly set
-    if sub_calls is not None:
-        config.sub_calls_enabled = sub_calls
-    if max_sub_calls is not None:
-        config.sub_calls_max_per_turn = max_sub_calls
+        # CLI overrides config only when explicitly set
+        if sub_calls is not None:
+            config.sub_calls_enabled = sub_calls
+        if max_sub_calls is not None:
+            config.sub_calls_max_per_turn = max_sub_calls
 
-    # Use config values as defaults, CLI args override
-    effective_model = model or config.model
-    effective_backend = backend or config.backend
-    effective_environment = environment or config.environment
-    effective_max_depth = max_depth if max_depth is not None else config.max_depth
-    effective_token_budget = token_budget if token_budget is not None else config.token_budget
-    effective_timeout = timeout if timeout is not None else config.timeout_seconds
+        # Use config values as defaults, CLI args override
+        effective_model = model or config.model
+        effective_backend = backend or config.backend
+        effective_environment = environment or config.environment
+        effective_max_depth = max_depth if max_depth is not None else config.max_depth
+        effective_token_budget = token_budget if token_budget is not None else config.token_budget
+        effective_timeout = timeout if timeout is not None else config.timeout_seconds
 
-    # Show effective config if requested
-    if show_config or verbose:
-        console.print("[bold]Effective Configuration:[/bold]")
-        console.print(f"  Model: {effective_model}")
-        console.print(f"  Backend: {effective_backend}")
-        console.print(f"  Environment: {effective_environment}")
-        console.print(f"  Max Depth: {effective_max_depth}")
-        console.print(f"  Token Budget: {effective_token_budget}")
-        console.print(f"  Timeout: {effective_timeout}s")
-        console.print(f"  Sub-calls: {config.sub_calls_enabled}")
-        if config.snipara_project_slug:
-            console.print(f"  Snipara Project: {config.snipara_project_slug}")
-        console.print()
-        if show_config:
-            return
+        if effective_max_depth < 1:
+            console.print("[red]Error:[/red] --max-depth must be at least 1")
+            raise typer.Exit(2)
+
+        # Show effective config if requested
+        if show_config or verbose:
+            console.print("[bold]Effective Configuration:[/bold]")
+            console.print(f"  Model: {effective_model}")
+            console.print(f"  Backend: {effective_backend}")
+            console.print(f"  Environment: {effective_environment}")
+            console.print(f"  Max Depth: {effective_max_depth}")
+            console.print(f"  Token Budget: {effective_token_budget}")
+            console.print(f"  Timeout: {effective_timeout}s")
+            console.print(f"  Sub-calls: {config.sub_calls_enabled}")
+            if config.snipara_project_slug:
+                console.print(f"  Snipara Project: {config.snipara_project_slug}")
+            console.print()
+            if show_config:
+                raise typer.Exit()
+
+        try:
+            rlm = RLM(
+                backend=effective_backend,
+                model=effective_model,
+                environment=effective_environment,
+                config=config,
+                verbose=verbose,
+            )
+        except ImportError as e:
+            raise RuntimeError(str(e)) from None
+
+        options = CompletionOptions(
+            max_depth=effective_max_depth,
+            token_budget=effective_token_budget,
+            timeout_seconds=effective_timeout,
+            include_trajectory=verbose,
+        )
+
+        if not json_output:
+            with console.status("[bold green]Running completion..."):
+                return asyncio.run(rlm.completion(prompt, system=system, options=options))
+        return asyncio.run(rlm.completion(prompt, system=system, options=options))
 
     try:
-        rlm = RLM(
-            backend=effective_backend,
-            model=effective_model,
-            environment=effective_environment,
-            config=config,
-            verbose=verbose,
-        )
-    except ImportError as e:
-        console.print(f"[red]Error:[/red] {e}")
+        if json_output:
+            sink = io.StringIO()
+            with redirect_stdout(sink), redirect_stderr(sink):
+                result = _execute()
+        else:
+            result = _execute()
+    except typer.Exit:
+        raise
+    except Exception as e:
+        if json_output:
+            typer.echo(json.dumps({"success": False, "error": str(e)}, indent=2))
+        else:
+            console.print(Panel(str(e), title="Error", border_style="red"))
         raise typer.Exit(1) from None
 
-    options = CompletionOptions(
-        max_depth=effective_max_depth,
-        token_budget=effective_token_budget,
-        timeout_seconds=effective_timeout,
-        include_trajectory=verbose,
-    )
-
-    if not json_output:
-        with console.status("[bold green]Running completion..."):
-            result = asyncio.run(rlm.completion(prompt, system=system, options=options))
-    else:
-        result = asyncio.run(rlm.completion(prompt, system=system, options=options))
-
     if json_output:
-        import json
-
-        console.print(json.dumps(result.to_dict(), indent=2))
+        typer.echo(json.dumps(result.to_dict(), indent=2))  # type: ignore[union-attr]
     else:
-        console.print(Panel(result.response, title="Response", border_style="green"))
+        border = "green" if result.success else "red"
+        title = "Response" if result.success else "Error"
+        console.print(Panel(result.response, title=title, border_style=border))  # type: ignore[union-attr]
 
-        if verbose:
+        if verbose and result.success:  # type: ignore[union-attr]
             console.print()
             table = Table(title="Execution Summary")
             table.add_column("Metric", style="cyan")
             table.add_column("Value", style="green")
-            table.add_row("Trajectory ID", str(result.trajectory_id))
-            table.add_row("Total Calls", str(result.total_calls))
-            table.add_row("Total Tokens", str(result.total_tokens))
-            table.add_row("Tool Calls", str(result.total_tool_calls))
-            table.add_row("Duration", f"{result.duration_ms}ms")
-            table.add_row("Success", "✓" if result.success else "✗")
+            table.add_row("Trajectory ID", str(result.trajectory_id))  # type: ignore[union-attr]
+            table.add_row("Total Calls", str(result.total_calls))  # type: ignore[union-attr]
+            table.add_row("Total Tokens", str(result.total_tokens))  # type: ignore[union-attr]
+            table.add_row("Tool Calls", str(result.total_tool_calls))  # type: ignore[union-attr]
+            table.add_row("Duration", f"{result.duration_ms}ms")  # type: ignore[union-attr]
+            table.add_row("Success", "✓" if result.success else "✗")  # type: ignore[union-attr]
             console.print(table)
+
+    if not result.success:  # type: ignore[union-attr]
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -252,99 +322,112 @@ def agent(
     from rlm.core.config import load_config
     from rlm.core.orchestrator import RLM
 
-    config = load_config(config_file)
+    def _execute() -> object:
+        config = load_config(config_file)
 
-    # Check for Claude Code context without API keys
-    if not has_llm_api_keys(config) and is_claude_code_context():
-        show_claude_code_guidance()
-        raise typer.Exit(1)
+        # Check for Claude Code context without API keys
+        if not has_llm_api_keys(config) and is_claude_code_context():
+            show_claude_code_guidance()
+            raise RuntimeError("Claude Code context detected without LLM API keys")
 
-    # Use config values as defaults, CLI args override
-    effective_model = model or config.model
-    effective_backend = backend or config.backend
-    effective_environment = environment or config.environment
-    effective_token_budget = token_budget if token_budget is not None else 50000
-    effective_timeout = timeout if timeout is not None else 300  # 5 minutes for agents
+        # Use config values as defaults, CLI args override
+        effective_model = model or config.model
+        effective_backend = backend or config.backend
+        effective_environment = environment or config.environment
+        effective_token_budget = token_budget if token_budget is not None else 50000
+        effective_timeout = timeout if timeout is not None else 300  # 5 minutes for agents
 
-    # Show effective config if requested
-    if show_config or verbose:
-        console.print("[bold]Effective Configuration:[/bold]")
-        console.print(f"  Model: {effective_model}")
-        console.print(f"  Backend: {effective_backend}")
-        console.print(f"  Environment: {effective_environment}")
-        console.print(f"  Token Budget: {effective_token_budget}")
-        console.print(f"  Cost Limit: ${cost_limit}")
-        console.print(f"  Timeout: {effective_timeout}s")
-        console.print(f"  Max Iterations: {max_iterations}")
-        if config.snipara_project_slug:
-            console.print(f"  Snipara Project: {config.snipara_project_slug}")
-        console.print()
-        if show_config:
-            return
+        # Show effective config if requested
+        if show_config or verbose:
+            console.print("[bold]Effective Configuration:[/bold]")
+            console.print(f"  Model: {effective_model}")
+            console.print(f"  Backend: {effective_backend}")
+            console.print(f"  Environment: {effective_environment}")
+            console.print(f"  Token Budget: {effective_token_budget}")
+            console.print(f"  Cost Limit: ${cost_limit}")
+            console.print(f"  Timeout: {effective_timeout}s")
+            console.print(f"  Max Iterations: {max_iterations}")
+            if config.snipara_project_slug:
+                console.print(f"  Snipara Project: {config.snipara_project_slug}")
+            console.print()
+            if show_config:
+                raise typer.Exit()
+
+        try:
+            rlm = RLM(
+                backend=effective_backend,
+                model=effective_model,
+                environment=effective_environment,
+                config=config,
+                verbose=verbose,
+            )
+        except ImportError as e:
+            raise RuntimeError(str(e)) from None
+
+        agent_config = AgentConfig(
+            max_iterations=max_iterations,
+            token_budget=effective_token_budget,
+            cost_limit=cost_limit,
+            timeout_seconds=effective_timeout,
+            auto_context=auto_context,
+            trajectory_log=verbose,
+        )
+
+        runner = AgentRunner(rlm, agent_config)
+
+        if not json_output:
+            with console.status("[bold green]Agent running..."):
+                return asyncio.run(runner.run(task))
+        return asyncio.run(runner.run(task))
 
     try:
-        rlm = RLM(
-            backend=effective_backend,
-            model=effective_model,
-            environment=effective_environment,
-            config=config,
-            verbose=verbose,
-        )
-    except ImportError as e:
-        console.print(f"[red]Error:[/red] {e}")
+        if json_output:
+            sink = io.StringIO()
+            with redirect_stdout(sink), redirect_stderr(sink):
+                result = _execute()
+        else:
+            result = _execute()
+    except typer.Exit:
+        raise
+    except Exception as e:
+        if json_output:
+            typer.echo(json.dumps({"success": False, "error": str(e)}, indent=2))
+        else:
+            console.print(Panel(str(e), title="Error", border_style="red"))
         raise typer.Exit(1) from None
 
-    agent_config = AgentConfig(
-        max_iterations=max_iterations,
-        token_budget=effective_token_budget,
-        cost_limit=cost_limit,
-        timeout_seconds=effective_timeout,
-        auto_context=auto_context,
-        trajectory_log=verbose,
-    )
-
-    runner = AgentRunner(rlm, agent_config)
-
-    if not json_output:
-        with console.status("[bold green]Agent running..."):
-            result = asyncio.run(runner.run(task))
-    else:
-        result = asyncio.run(runner.run(task))
-
     if json_output:
-        import json
-
-        console.print(json.dumps(result.to_dict(), indent=2))
+        typer.echo(json.dumps(result.to_dict(), indent=2))  # type: ignore[union-attr]
     else:
         # Answer panel
-        border = "green" if result.success else "yellow" if result.forced_termination else "red"
+        border = "green" if result.success else "yellow" if result.forced_termination else "red"  # type: ignore[union-attr]
         title = (
             "Answer"
             if result.success
             else "Answer (forced)"
             if result.forced_termination
             else "Error"
-        )
-        console.print(Panel(result.answer, title=title, border_style=border))
+        )  # type: ignore[union-attr]
+        console.print(Panel(result.answer, title=title, border_style=border))  # type: ignore[union-attr]
 
         # Summary table
         console.print()
         table = Table(title="Agent Summary")
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
-        table.add_row("Run ID", result.run_id)
-        table.add_row("Success", "[green]Yes[/green]" if result.success else "[red]No[/red]")
-        table.add_row("Source", result.answer_source)
-        table.add_row("Iterations", str(result.iterations))
-        table.add_row("Total Tokens", f"{result.total_tokens:,}")
-        table.add_row("Total Cost", f"${result.total_cost:.4f}" if result.total_cost else "N/A")
-        table.add_row("Duration", f"{result.duration_ms:,}ms")
-        if result.forced_termination:
+        table.add_row("Run ID", result.run_id)  # type: ignore[union-attr]
+        table.add_row("Success", "[green]Yes[/green]" if result.success else "[red]No[/red]")  # type: ignore[union-attr]
+        table.add_row("Source", result.answer_source)  # type: ignore[union-attr]
+        table.add_row("Iterations", str(result.iterations))  # type: ignore[union-attr]
+        table.add_row("Total Tokens", f"{result.total_tokens:,}")  # type: ignore[union-attr]
+        table.add_row("Total Cost", f"${result.total_cost:.4f}" if result.total_cost else "N/A")  # type: ignore[union-attr]
+        table.add_row("Duration", f"{result.duration_ms:,}ms")  # type: ignore[union-attr]
+        if result.forced_termination:  # type: ignore[union-attr]
             table.add_row("Forced", "[yellow]Yes[/yellow]")
         console.print(table)
 
         # Verbose: iteration details
-        if verbose and result.iteration_summaries:
+        if verbose and result.iteration_summaries:  # type: ignore[union-attr]
             console.print()
             iter_table = Table(title="Iteration Details")
             iter_table.add_column("#", style="dim")
@@ -353,7 +436,7 @@ def agent(
             iter_table.add_column("Tools", style="cyan")
             iter_table.add_column("Preview", style="dim", max_width=60)
 
-            for s in result.iteration_summaries:
+            for s in result.iteration_summaries:  # type: ignore[union-attr]
                 iter_table.add_row(
                     str(s["iteration"] + 1),
                     str(s.get("tokens", 0)),
@@ -362,6 +445,9 @@ def agent(
                     (s.get("response_preview", "")[:60] or "—"),
                 )
             console.print(iter_table)
+
+    if not result.success:  # type: ignore[union-attr]
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -449,9 +535,7 @@ def logs(
             raise typer.Exit(1)
 
         if json_output:
-            import json
-
-            console.print(json.dumps([e.to_dict() for e in events], indent=2))
+            typer.echo(json.dumps([e.to_dict() for e in events], indent=2))
         else:
             for event in events:
                 console.print()
@@ -479,9 +563,7 @@ def logs(
             return
 
         if json_output:
-            import json
-
-            console.print(json.dumps(trajectories, indent=2))
+            typer.echo(json.dumps(trajectories, indent=2))
         else:
             table = Table(title="Recent Trajectories")
             table.add_column("ID", style="cyan")
@@ -505,7 +587,7 @@ def logs(
 @app.command()
 def version() -> None:
     """Show version information."""
-    console.print(f"rlm-runtime {__version__}")
+    console.print(_version_string())
 
 
 @app.command("snipara-status")
@@ -763,6 +845,7 @@ def visualize(
 @app.command()
 def doctor() -> None:
     """Check RLM runtime setup and dependencies."""
+    _load_project_env()
     console.print("[bold]RLM Runtime Doctor[/bold]")
     console.print()
 

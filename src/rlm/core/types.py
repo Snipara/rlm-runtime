@@ -199,11 +199,12 @@ class RLMResult:
     total_input_tokens: int = 0  # Total input/prompt tokens across all calls
     total_output_tokens: int = 0  # Total output/completion tokens across all calls
     total_cost_usd: float | None = None  # Total estimated API cost
+    error: str | None = None
 
     @property
     def success(self) -> bool:
-        """Whether all events completed without errors."""
-        return all(e.error is None for e in self.events)
+        """Whether the completion finished without any recorded errors."""
+        return self.error is None and all(e.error is None for e in self.events)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -217,6 +218,7 @@ class RLMResult:
             "total_tool_calls": self.total_tool_calls,
             "duration_ms": self.duration_ms,
             "total_cost_usd": self.total_cost_usd,
+            "error": self.error,
             "success": self.success,
             "events": [e.to_dict() for e in self.events],
         }

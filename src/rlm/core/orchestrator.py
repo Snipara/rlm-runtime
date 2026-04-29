@@ -346,6 +346,7 @@ class RLM:
             )
 
         # Execute recursive completion with timeout enforcement
+        completion_error: str | None = None
         try:
             response, events = await asyncio.wait_for(
                 self._recursive_complete(
@@ -373,6 +374,7 @@ class RLM:
             ) from None
         except Exception as e:
             logger.error("Completion failed", error=str(e), trajectory_id=str(trajectory_id))
+            completion_error = str(e)
             events.append(
                 TrajectoryEvent(
                     trajectory_id=trajectory_id,
@@ -424,6 +426,7 @@ class RLM:
             total_tool_calls=total_tool_calls,
             duration_ms=duration_ms,
             total_cost_usd=total_cost_usd,
+            error=completion_error,
             events=events if options.include_trajectory else [],
         )
 

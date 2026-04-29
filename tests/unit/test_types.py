@@ -161,6 +161,23 @@ class TestRLMResult:
         )
         assert not result.success
 
+    def test_error_without_trajectory_is_still_failure(self):
+        """A recorded error should fail even if trajectory data is omitted."""
+        result = RLMResult(
+            response="Error: missing API key",
+            trajectory_id=uuid4(),
+            total_calls=0,
+            total_tokens=0,
+            total_tool_calls=0,
+            duration_ms=0,
+            error="missing API key",
+        )
+
+        assert not result.success
+        data = result.to_dict()
+        assert data["success"] is False
+        assert data["error"] == "missing API key"
+
 
 class TestCompletionOptions:
     """Tests for CompletionOptions dataclass."""

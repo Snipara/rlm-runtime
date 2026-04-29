@@ -1,5 +1,6 @@
 """Tests for RLM configuration management."""
 
+import os
 from pathlib import Path
 
 from rlm.core.config import RLMConfig, load_config, save_config
@@ -20,7 +21,7 @@ class TestRLMConfig:
         assert config.max_subcalls == 12
         assert config.token_budget == 8000
         assert config.tool_budget == 20
-        assert config.timeout_seconds == 120
+        assert config.timeout_seconds == 300
         assert config.verbose is False
 
     def test_custom_values(self):
@@ -138,6 +139,25 @@ class TestLoadConfig:
 
         assert config.backend == "litellm"
         assert config.model == "gpt-4o-mini"
+
+    def test_loads_dotenv_file(self, tmp_path, monkeypatch):
+        """Should load values from a local .env file without python-dotenv."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("RLM_MODEL", raising=False)
+
+        (tmp_path / ".env").write_text(
+            """
+OPENAI_API_KEY=sk-test-from-dotenv
+RLM_MODEL=claude-3-haiku
+"""
+        )
+
+        config = load_config()
+
+        assert config.model == "claude-3-haiku"
+        assert config.backend == "litellm"
+        assert os.environ["OPENAI_API_KEY"] == "sk-test-from-dotenv"
 
     def test_load_from_toml_file(self, tmp_path, monkeypatch):
         """Should load settings from rlm.toml."""

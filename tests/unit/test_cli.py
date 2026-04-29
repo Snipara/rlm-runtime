@@ -20,6 +20,13 @@ class TestVersionCommand:
         assert result.exit_code == 0
         assert "rlm-runtime" in result.stdout
 
+    def test_root_version_flag(self):
+        """Should support the root --version flag."""
+        result = runner.invoke(app, ["--version"])
+
+        assert result.exit_code == 0
+        assert "rlm-runtime" in result.stdout
+
 
 class TestInitCommand:
     """Tests for init command."""
@@ -196,6 +203,25 @@ class TestRunCommand:
         mock_rlm_class.side_effect = ImportError("Docker not available")
 
         result = runner.invoke(app, ["run", "Test"])
+
+        assert result.exit_code == 1
+        assert "Error" in result.stdout
+
+    @patch("rlm.core.config.load_config")
+    @patch("rlm.core.orchestrator.RLM")
+    def test_non_json_failure_exits_nonzero(self, mock_rlm_class, mock_load_config):
+        """Should exit non-zero when the completion reports failure."""
+        from rlm.core.config import RLMConfig
+
+        mock_load_config.return_value = RLMConfig()
+        mock_rlm = MagicMock()
+        mock_result = MagicMock()
+        mock_result.response = "Error: missing API key"
+        mock_result.success = False
+        mock_rlm.completion = AsyncMock(return_value=mock_result)
+        mock_rlm_class.return_value = mock_rlm
+
+        result = runner.invoke(app, ["run", "Hello"])
 
         assert result.exit_code == 1
         assert "Error" in result.stdout
@@ -399,6 +425,52 @@ class TestRunCommandEdgeCases:
         # Either works or error
         if result.exit_code == 0:
             assert "response" in result.stdout or "{" in result.stdout
+
+    @patch("rlm.core.config.load_config")
+    @patch("rlm.core.orchestrator.RLM")
+    def test_run_with_json_output_is_clean(self, mock_rlm_class, mock_load_config):
+        """Should suppress noisy stdout/stderr before emitting JSON."""
+        from rlm.core.config import RLMConfig
+
+        mock_load_config.return_value = RLMConfig()
+        mock_rlm = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.to_dict.return_value = {
+            "response": "Test response",
+            "success": True,
+            "error": None,
+        }
+
+        async def noisy_completion(*_args, **_kwargs):
+            import sys
+
+            print("debug noise on stdout")
+            print("debug noise on stderr", file=sys.stderr)
+            return mock_result
+
+        mock_rlm.completion = noisy_completion
+        mock_rlm_class.return_value = mock_rlm
+
+        result = runner.invoke(app, ["run", "Hello", "--json"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["success"] is True
+        assert data["response"] == "Test response"
+        assert "debug noise" not in result.stdout
+
+    @patch("rlm.core.config.load_config")
+    def test_rejects_max_depth_zero(self, mock_load_config):
+        """Should reject a zero max-depth before running."""
+        from rlm.core.config import RLMConfig
+
+        mock_load_config.return_value = RLMConfig()
+
+        result = runner.invoke(app, ["run", "Hello", "--max-depth", "0"])
+
+        assert result.exit_code == 2
+        assert "max-depth" in result.stdout.lower()
 
     @patch("rlm.core.config.load_config")
     @patch("rlm.core.orchestrator.RLM")
