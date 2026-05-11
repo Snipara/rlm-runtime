@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Suppress Pydantic serialization warnings from LiteLLM
 # These occur when LiteLLM's internal models don't match API responses exactly
-# This is a LiteLLM issue, not an rlm-runtime issue
+# This is a LiteLLM issue, not a Snipara Sandbox issue
 warnings.filterwarnings("ignore", message=".*Pydantic.*serializer.*", category=UserWarning)
 warnings.filterwarnings("ignore", message=".*Expected.*fields.*", category=UserWarning)
 warnings.filterwarnings("ignore", message=".*Valid config keys.*", category=UserWarning)

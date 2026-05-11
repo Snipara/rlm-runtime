@@ -1,33 +1,33 @@
 # Configuration Guide
 
-RLM Runtime can be configured via TOML files, environment variables, or programmatically.
+Snipara Sandbox can be configured via TOML files, environment variables, or programmatically.
 
 ## Configuration Priority
 
 1. **Environment variables** (highest priority)
-2. **rlm.toml config file**
+2. **snipara-sandbox.toml config file**
 3. **Default values** (lowest priority)
 
 ## Quick Setup
 
 ```bash
 # Initialize config in current directory
-rlm init
+snipara-sandbox init
 
 # Check your setup
-rlm doctor
+snipara-sandbox doctor
 
 # Inspect the effective configuration
-rlm config show
-rlm config show --json
+snipara-sandbox config show
+snipara-sandbox config show --json
 ```
 
 ## Configuration File
 
-Create `rlm.toml` in your project root:
+Create `snipara-sandbox.toml` in your project root:
 
 ```toml
-[rlm]
+[snipara_sandbox]
 # LLM Backend
 backend = "litellm"           # litellm, openai, or anthropic
 model = "gpt-4o-mini"         # Model identifier
@@ -56,7 +56,7 @@ docker_network_disabled = true
 docker_timeout = 30
 
 # Snipara Integration (optional — or use OAuth via snipara-mcp-login)
-snipara_api_key = "rlm_..."
+snipara_api_key = "snp-..."
 snipara_project_slug = "my-project"
 snipara_base_url = "https://api.snipara.com/mcp"
 memory_enabled = false            # Enable Tier 2 memory tools
@@ -64,41 +64,41 @@ memory_enabled = false            # Enable Tier 2 memory tools
 
 ## Environment Variables
 
-All configuration options can be set via environment variables with the `RLM_` prefix:
+All configuration options can be set via environment variables with the `SNIPARA_SANDBOX_` prefix. Legacy `RLM_` variables are still accepted for existing installations.
 
 ```bash
 # Backend
-export RLM_BACKEND=litellm
-export RLM_MODEL=gpt-4o-mini
-export RLM_TEMPERATURE=0.0
+export SNIPARA_SANDBOX_BACKEND=litellm
+export SNIPARA_SANDBOX_MODEL=gpt-4o-mini
+export SNIPARA_SANDBOX_TEMPERATURE=0.0
 
 # Environment
-export RLM_ENVIRONMENT=docker
+export SNIPARA_SANDBOX_ENVIRONMENT=docker
 
 # Limits
-export RLM_MAX_DEPTH=4
-export RLM_MAX_SUBCALLS=12
-export RLM_TOKEN_BUDGET=8000
-export RLM_TOOL_BUDGET=20
-export RLM_TIMEOUT_SECONDS=120
+export SNIPARA_SANDBOX_MAX_DEPTH=4
+export SNIPARA_SANDBOX_MAX_SUBCALLS=12
+export SNIPARA_SANDBOX_TOKEN_BUDGET=8000
+export SNIPARA_SANDBOX_TOOL_BUDGET=20
+export SNIPARA_SANDBOX_TIMEOUT_SECONDS=120
 
 # Logging
-export RLM_LOG_DIR=./logs
-export RLM_VERBOSE=false
-export RLM_LOG_LEVEL=INFO
+export SNIPARA_SANDBOX_LOG_DIR=./logs
+export SNIPARA_SANDBOX_VERBOSE=false
+export SNIPARA_SANDBOX_LOG_LEVEL=INFO
 
 # Docker
-export RLM_DOCKER_IMAGE=python:3.11-slim
-export RLM_DOCKER_CPUS=1.0
-export RLM_DOCKER_MEMORY=512m
-export RLM_DOCKER_NETWORK_DISABLED=true
-export RLM_DOCKER_TIMEOUT=30
+export SNIPARA_SANDBOX_DOCKER_IMAGE=python:3.11-slim
+export SNIPARA_SANDBOX_DOCKER_CPUS=1.0
+export SNIPARA_SANDBOX_DOCKER_MEMORY=512m
+export SNIPARA_SANDBOX_DOCKER_NETWORK_DISABLED=true
+export SNIPARA_SANDBOX_DOCKER_TIMEOUT=30
 
-# Snipara (no RLM_ prefix for key/slug)
-export SNIPARA_API_KEY=rlm_...
+# Snipara service integration
+export SNIPARA_API_KEY=snp-...
 export SNIPARA_PROJECT_SLUG=my-project
-export RLM_SNIPARA_BASE_URL=https://api.snipara.com/mcp  # override base URL
-export RLM_MEMORY_ENABLED=true                            # enable memory tools
+export SNIPARA_BASE_URL=https://api.snipara.com/mcp  # override base URL
+export SNIPARA_MEMORY_ENABLED=true                   # enable memory tools
 ```
 
 ## API Key Configuration
@@ -124,18 +124,17 @@ export AZURE_API_VERSION=2024-02-15-preview
 ## Programmatic Configuration
 
 ```python
-from rlm import RLM
-from rlm.core.config import RLMConfig
+from snipara_sandbox import SniparaSandbox, SniparaSandboxConfig
 
 # Direct parameters (override config file)
-rlm = RLM(
+sandbox = SniparaSandbox(
     model="gpt-4o",
     environment="docker",
     verbose=True,
 )
 
 # Custom config object
-config = RLMConfig(
+config = SniparaSandboxConfig(
     model="claude-sonnet-4-20250514",
     environment="docker",
     max_depth=6,
@@ -143,7 +142,7 @@ config = RLMConfig(
     docker_memory="1g",
 )
 
-rlm = RLM(config=config)
+sandbox = SniparaSandbox(config=config)
 ```
 
 ## Configuration Options Reference
@@ -206,19 +205,19 @@ OAuth tokens (`~/.snipara/tokens.json`) are checked first. If unavailable,
 
 ## Per-Project Configuration
 
-Create `rlm.toml` in each project directory:
+Create `snipara-sandbox.toml` in each project directory:
 
 ```
 ~/projects/
 ├── frontend/
-│   └── rlm.toml     # model = "gpt-4o-mini"
+│   └── snipara-sandbox.toml     # model = "gpt-4o-mini"
 ├── backend/
-│   └── rlm.toml     # model = "gpt-4o", environment = "docker"
+│   └── snipara-sandbox.toml     # model = "gpt-4o", environment = "docker"
 └── ml-pipeline/
-    └── rlm.toml     # model = "claude-sonnet-4-20250514", max_depth = 8
+    └── snipara-sandbox.toml     # model = "claude-sonnet-4-20250514", max_depth = 8
 ```
 
-Each project uses its own `rlm.toml` configuration. The CLI automatically detects the config from the current directory.
+Each project uses its own `snipara-sandbox.toml` configuration. The CLI automatically detects the config from the current directory.
 
 ## Model Selection Guide
 
@@ -245,8 +244,8 @@ Each project uses its own `rlm.toml` configuration. The CLI automatically detect
 # Check if key is set
 echo $OPENAI_API_KEY
 
-# Or use rlm doctor
-rlm doctor
+# Or use snipara-sandbox doctor
+snipara-sandbox doctor
 ```
 
 ### "Docker not available"
@@ -256,15 +255,15 @@ rlm doctor
 docker info
 
 # Install Docker support
-pip install rlm-runtime[docker]
+pip install snipara-sandbox[docker]
 ```
 
 ### "Config file not found"
 
 ```bash
 # Initialize config
-rlm init
+snipara-sandbox init
 
 # Or specify path
-rlm run --config /path/to/rlm.toml "Your prompt"
+snipara-sandbox run --config /path/to/snipara-sandbox.toml "Your prompt"
 ```

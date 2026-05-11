@@ -1,4 +1,4 @@
-"""RLM Orchestrator - the main entry point for recursive completions."""
+"""Snipara Sandbox orchestrator - the main entry point for recursive completions."""
 
 from __future__ import annotations
 
@@ -38,17 +38,17 @@ logger = structlog.get_logger()
 
 
 class RLM:
-    """Recursive Language Model runtime.
+    """Snipara Sandbox runtime.
 
     The main entry point for recursive LLM completions with tool use
     and sandboxed code execution.
 
     Example:
         ```python
-        from rlm import RLM
+        from snipara_sandbox import SniparaSandbox
 
-        rlm = RLM(model="gpt-4o-mini", environment="docker")
-        result = await rlm.completion("Analyze data.csv")
+        sandbox = SniparaSandbox(model="gpt-4o-mini", environment="docker")
+        result = await sandbox.completion("Analyze data.csv")
         print(result.response)
         ```
     """
@@ -64,7 +64,7 @@ class RLM:
         snipara_api_key: str | None = None,
         snipara_project_slug: str | None = None,
     ):
-        """Initialize the RLM runtime.
+        """Initialize the Snipara Sandbox runtime.
 
         Args:
             backend: LLM backend ("litellm", "openai", "anthropic") or instance
@@ -123,7 +123,7 @@ class RLM:
 
         if self.verbose:
             logger.info(
-                "RLM initialized",
+                "Snipara Sandbox initialized",
                 backend=backend if isinstance(backend, str) else type(backend).__name__,
                 model=model,
                 environment=environment
@@ -167,7 +167,7 @@ class RLM:
             except ImportError:
                 raise ImportError(
                     "Docker support requires 'docker' package. "
-                    "Install with: pip install rlm-runtime[docker]"
+                    "Install with: pip install snipara-sandbox[docker]"
                 ) from None
 
         if environment == "wasm":
@@ -268,7 +268,7 @@ class RLM:
         except ImportError:
             logger.debug(
                 "snipara-mcp not installed, skipping Snipara tools. "
-                "Install with: pip install rlm-runtime[snipara]"
+                "Install with: pip install snipara-sandbox[snipara]"
             )
 
     async def completion(
@@ -726,3 +726,10 @@ class RLM:
                 estimated_output_tokens=estimated_output_tokens,
                 estimated_cost_usd=final_cost,
             )
+
+
+class SniparaSandbox(RLM):
+    """Public Snipara Sandbox class name.
+
+    ``RLM`` remains available as a legacy class name for existing users.
+    """

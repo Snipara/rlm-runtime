@@ -1,6 +1,6 @@
 # Snipara Integration
 
-Snipara est une plateforme d'optimisation de contexte intelligente pour RLM Runtime. Au lieu de lire des fichiers entiers, le LLM interroge Snipara pour obtenir les sections les plus pertinentes.
+Snipara est une plateforme d'optimisation de contexte intelligente pour Snipara Sandbox. Au lieu de lire des fichiers entiers, le LLM interroge Snipara pour obtenir les sections les plus pertinentes.
 
 ## Qu'est-ce que Snipara ?
 
@@ -25,7 +25,7 @@ Snipara est une plateforme de gestion de documentation intelligente qui offre :
 ## Installation
 
 ```bash
-pip install rlm-runtime[mcp]
+pip install snipara-sandbox[mcp]
 ```
 
 Cette installation inclut les dépendances nécessaires :
@@ -52,25 +52,25 @@ Pour les utilisateurs open-source ou non-Snipara :
 **Variables d'environnement :**
 
 ```bash
-export SNIPARA_API_KEY=rlm_votre_cle_ici
+export SNIPARA_API_KEY=snp-votre-cle-ici
 export SNIPARA_PROJECT_SLUG=votre-projet
 ```
 
-**Fichier de configuration (rlm.toml) :**
+**Fichier de configuration (snipara-sandbox.toml) :**
 
 ```toml
-[rlm]
-snipara_api_key = "rlm_votre_cle_ici"
+[snipara_sandbox]
+snipara_api_key = "snp-votre-cle-ici"
 snipara_project_slug = "votre-projet"
 ```
 
 **Code :**
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
-rlm = RLM(
-    snipara_api_key="rlm_votre_cle_ici",
+sandbox = SniparaSandbox(
+    snipara_api_key="snp-votre-cle-ici",
     snipara_project_slug="votre-projet",
 )
 ```
@@ -83,14 +83,14 @@ Les credentials sont résolus dans l'ordre suivant ; le premier trouvé est util
 |----------|--------|--------|-------|
 | 1 | Tokens OAuth (`~/.snipara/tokens.json`) | `Authorization: Bearer <token>` | Via `snipara-mcp-login` |
 | 2 | Variable d'environnement `SNIPARA_API_KEY` | `x-api-key: <key>` | Pour les clés API simples |
-| 3 | `snipara_api_key` dans `rlm.toml` | `x-api-key: <key>` | Fallback de config statique |
+| 3 | `snipara_api_key` dans `snipara-sandbox.toml` | `x-api-key: <key>` | Fallback de config statique |
 | 4 | Import du package `snipara-mcp` | (géré par le package) | Compatibilité arrière uniquement |
 
 Si aucun credential n'est disponible, les outils Snipara sont silencieux ignorés.
 
 ## Architecture
 
-RLM accède à Snipara par **deux mécanismes** — un client HTTP natif (préféré) et le package `snipara-mcp` (fallback de compatibilité arrière) :
+Snipara Sandbox accède à Snipara par **deux mécanismes** — un client HTTP natif (préféré) et le package `snipara-mcp` (fallback de compatibilité arrière) :
 
 ```
 Orchestrator._register_snipara_tools()
@@ -100,10 +100,10 @@ Orchestrator._register_snipara_tools()
     |       -> résout l'auth automatiquement
     |       -> retourne None quand pas de credentials trouvés
     |   get_native_snipara_tools(client, memory_enabled)
-    |       -> 5 outils (Tiers 1+3) ou 9 outils (tous les tiers)
+    |       -> outils Snipara-first plus alias legacy
     |
     +-- Tentative 2: Package snipara-mcp (compatibilité arrière)
-        from snipara_mcp.rlm_tools import get_snipara_tools
+        from snipara_mcp.rlm_tools import get_snipara_tools  # alias legacy
 ```
 
 Le client natif envoie des payloads **JSON-RPC 2.0** à l'endpoint Snipara API à `https://api.snipara.com/mcp/{project_slug}`.
@@ -114,12 +114,12 @@ Les outils sont organisés en trois niveaux :
 
 ### Niveau 1 — Récupération de contexte (toujours enregistré)
 
-#### rlm_context_query
+#### snipara_context_query
 
 Outil principal de recherche de documentation sémantique/mots-clés/hybride.
 
 ```python
-async def rlm_context_query(
+async def snipara_context_query(
     query: str,                           # Question ou sujet à rechercher
     max_tokens: int = 4000,               # Budget de tokens pour les résultats
     search_mode: str = "hybrid",          # "keyword" | "semantic" | "hybrid"
@@ -133,35 +133,35 @@ async def rlm_context_query(
 - `semantic` - Similarité basée sur les embeddings
 - `hybrid` - Combine les deux (défaut, meilleure qualité)
 
-#### rlm_search
+#### snipara_search
 
 Recherche par motif regex dans toute la documentation indexée.
 
 ```python
-async def rlm_search(
+async def snipara_search(
     pattern: str,              # Motif regex à rechercher
     max_results: int = 20,     # Nombre maximum de résultats
 ) -> list:
 ```
 
-#### rlm_sections
+#### snipara_sections
 
 Liste les sections de documentation indexées avec pagination.
 
 ```python
-async def rlm_sections(
+async def snipara_sections(
     filter: str | None = None,     # Filtre de préfixe de titre (insensible à la casse)
     limit: int = 50,               # Nombre maximum de sections (max: 500)
     offset: int = 0,               # Nombre de sections à sauter
 ) -> list:
 ```
 
-#### rlm_read
+#### snipara_read
 
 Lit des lignes spécifiques de la documentation indexée.
 
 ```python
-async def rlm_read(
+async def snipara_read(
     start_line: int,    # Ligne de début
     end_line: int,      # Ligne de fin
 ) -> str:
@@ -169,14 +169,14 @@ async def rlm_read(
 
 ### Niveau 2 — Mémoire (activé par `memory_enabled`)
 
-Ces outils nécessitent `memory_enabled = true` dans la config ou `RLM_MEMORY_ENABLED=true`.
+Ces outils nécessitent `memory_enabled = true` dans la config ou `SNIPARA_MEMORY_ENABLED=true`.
 
-#### rlm_remember
+#### snipara_remember
 
 Stocke un souvenir pour rappel sémantique ultérieur.
 
 ```python
-async def rlm_remember(
+async def snipara_remember(
     content: str,                         # Contenu du souvenir
     type: str = "fact",                   # "fact" | "decision" | "learning" | "preference" | "todo" | "context"
     scope: str = "project",               # "agent" | "project" | "team" | "user"
@@ -201,12 +201,12 @@ async def rlm_remember(
 - `team` - Pour toute l'équipe
 - `user` - Pour l'utilisateur
 
-#### rlm_recall
+#### snipara_recall
 
 Recherche sémantiquement des souvenirs stockés.
 
 ```python
-async def rlm_recall(
+async def snipara_recall(
     query: str,                          # Requête de recherche
     limit: int = 5,                      # Nombre maximum de souvenirs
     min_relevance: float = 0.5,          # Score de pertinence minimum (0-1)
@@ -216,12 +216,12 @@ async def rlm_recall(
 ) -> list:
 ```
 
-#### rlm_memories
+#### snipara_memories
 
 Liste les souvenirs stockés avec des filtres optionnels.
 
 ```python
-async def rlm_memories(
+async def snipara_memories(
     type: str | None = None,        # Filtrer par type
     scope: str | None = None,       # Filtrer par portée
     category: str | None = None,    # Filtrer par catégorie
@@ -231,12 +231,12 @@ async def rlm_memories(
 ) -> list:
 ```
 
-#### rlm_forget
+#### snipara_forget
 
 Supprime des souvenirs par ID, type, catégorie ou âge.
 
 ```python
-async def rlm_forget(
+async def snipara_forget(
     memory_id: str | None = None,      souvenir
     type # ID spécifique du: str | None = None,           # Supprimer par type
     category: str | None = None,       # Supprimer par catégorie
@@ -246,12 +246,12 @@ async def rlm_forget(
 
 ### Niveau 3 — Avancé (toujours enregistré)
 
-#### rlm_shared_context
+#### snipara_shared_context
 
 Récupère le contexte fusionné des collections partagées.
 
 ```python
-async def rlm_shared_context(
+async def snipara_shared_context(
     categories: list[str] | None = None,   # "MANDATORY" | "BEST_PRACTICES" | "GUIDELINES" | "REFERENCE"
     max_tokens: int = 4000,                 # Budget de tokens maximum
     include_content: bool = True,           # Inclut le contenu fusionné
@@ -270,8 +270,8 @@ async def rlm_shared_context(
 |----------|---------|--------|
 | `SNIPARA_API_KEY` | Clé API brute pour authentification | None |
 | `SNIPARA_PROJECT_SLUG` | Slug du projet pour l'URL API | None |
-| `RLM_SNIPARA_BASE_URL` | Surcharger l'URL de base API | `https://api.snipara.com/mcp` |
-| `RLM_MEMORY_ENABLED` | Activer les outils de mémoire niveau 2 | `false` |
+| `SNIPARA_BASE_URL` | Surcharger l'URL de base API | `https://api.snipara.com/mcp` |
+| `SNIPARA_MEMORY_ENABLED` | Activer les outils de mémoire niveau 2 | `false` |
 | `SNIPARA_TIMEOUT` | Timeout des requêtes en secondes | `30` |
 
 ## Utilisation
@@ -279,17 +279,17 @@ async def rlm_shared_context(
 ### Utilisation basique
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 async def main():
-    rlm = RLM(
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
-        snipara_api_key="rlm_...",
+        snipara_api_key="snp-...",
         snipara_project_slug="mon-projet",
     )
 
     # Le LLM utilisera automatiquement les outils Snipara
-    result = await rlm.completion(
+    result = await sandbox.completion(
         "Comment fonctionne le système d'authentification ? "
         "Incluez des exemples de code."
     )
@@ -301,23 +301,23 @@ async def main():
 ### Utilisation avec mémoire
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 async def main():
-    rlm = RLM(
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
-        snipara_api_key="rlm_...",
+        snipara_api_key="snp-...",
         snipara_project_slug="mon-projet",
         memory_enabled=True,  # Active les outils de mémoire
     )
 
     # Première session - stocker une décision
-    await rlm.completion(
+    await sandbox.completion(
         "Nous avons décidé d'utiliser PostgreSQL comme base de données principale."
     )
 
     # Session ultérieure - la décision est rappelée
-    result = await rlm.completion(
+    result = await sandbox.completion(
         "Quelle base de données utilisons-nous pour ce projet ?"
     )
 ```
@@ -325,20 +325,20 @@ async def main():
 ### Utilisation avancée avec contexte partagé
 
 ```python
-from rlm import RLM, CompletionOptions
+from snipara_sandbox import SniparaSandbox, CompletionOptions
 
 async def main():
-    rlm = RLM(
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
-        snipara_api_key="rlm_...",
+        snipara_api_key="snp-...",
         snipara_project_slug="mon-projet",
     )
 
     # Récupérer les bonnes pratiques de l'équipe
     options = CompletionOptions(
-        system="Utilisez rlm_shared_context pour trouver les directives de l'équipe."
+        system="Utilisez snipara_shared_context pour trouver les directives de l'équipe."
     )
-    result = await rlm.completion(
+    result = await sandbox.completion(
         "Quelles sont nos normes de codage pour la gestion des erreurs ?",
         options=options,
     )
@@ -347,7 +347,7 @@ async def main():
 ### Utilisation directe des outils
 
 ```python
-from rlm.tools.snipara import SniparaClient, get_native_snipara_tools
+from snipara_sandbox.tools.snipara import SniparaClient, get_native_snipara_tools
 
 async def main():
     # Créer le client directement
@@ -361,7 +361,7 @@ async def main():
     tools = get_native_snipara_tools(client, memory_enabled=True)
 
     # Utiliser directement
-    context = await client.call_tool("rlm_context_query", {
+    context = await client.call_tool("snipara_context_query", {
         "query": "authentication flow",
         "search_mode": "hybrid",
     })
@@ -374,7 +374,7 @@ async def main():
 ```
 1. L'utilisateur demande : "Explique l'authentification"
    |
-2. Le LLM appelle : rlm_context_query("authentication")
+2. Le LLM appelle : snipara_context_query("authentication")
    |
 3. Snipara retourne :
    - Sections pertinentes de auth.md
@@ -400,16 +400,16 @@ Assurez-vous que votre documentation de projet est indexée dans Snipara :
 Pour les bonnes pratiques à l'échelle de l'équipe :
 
 ```python
-result = await rlm.completion(
+result = await sandbox.completion(
     "Quelles sont nos normes de codage pour la gestion des erreurs ?",
-    system="Utilisez rlm_shared_context pour trouver les directives de l'équipe."
+    system="Utilisez snipara_shared_context pour trouver les directives de l'équipe."
 )
 ```
 
 ### Activer la mémoire pour les tâches multi-étapes
 
 ```toml
-[rlm]
+[snipara_sandbox]
 memory_enabled = true
 ```
 
@@ -418,13 +418,13 @@ Le LLM peut alors stocker des décisions et les rappeler entre les complétions.
 ### Définir des budgets de tokens appropriés
 
 ```python
-from rlm import RLM, CompletionOptions
+from snipara_sandbox import SniparaSandbox, CompletionOptions
 
-rlm = RLM(snipara_api_key="...", snipara_project_slug="...")
+sandbox = SniparaSandbox(snipara_api_key="...", snipara_project_slug="...")
 
 # Pour des réponses détaillées, autorisez plus de tokens
 options = CompletionOptions(token_budget=12000)
-result = await rlm.completion("Vue complète de l'architecture", options=options)
+result = await sandbox.completion("Vue complète de l'architecture", options=options)
 ```
 
 ### Utiliser le bon mode de recherche
@@ -495,20 +495,20 @@ Vérifiez qu'au moins une source d'auth est configurée :
 
 1. OAuth : Exécutez `snipara-mcp-login` et vérifiez avec `snipara-mcp-status`
 2. Clé API : `echo $SNIPARA_API_KEY`
-3. Config : Vérifiez `snipara_api_key` dans `rlm.toml`
+3. Config : Vérifiez `snipara_api_key` dans `snipara-sandbox.toml`
 4. Le slug du projet est défini : `echo $SNIPARA_PROJECT_SLUG`
 
 ### "SniparaAPIError: 401 Unauthorized"
 
 1. Les tokens OAuth peuvent avoir expiré — exécutez `snipara-mcp-login` à nouveau
 2. Vérifiez la clé API sur [snipara.com/dashboard](https://snipara.com/dashboard)
-3. Vérifiez les fautes de frappe (les clés commencent par `rlm_`)
+3. Vérifiez les fautes de frappe (les nouvelles clés commencent par `snp-`)
 4. Assurez-vous que la clé a accès au projet spécifié
 
 ### "SniparaAPIError: Connection refused"
 
 1. Vérifiez votre connexion internet
-2. Vérifiez que `RLM_SNIPARA_BASE_URL` est correct (défaut : `https://api.snipara.com/mcp`)
+2. Vérifiez que `SNIPARA_BASE_URL` est correct (défaut : `https://api.snipara.com/mcp`)
 3. Vérifiez les proxy/pare-feu qui bloquent
 
 ### "Aucun résultat retourné"
@@ -555,7 +555,7 @@ Pour plus de détails sur l'intégration MCP, consultez la [documentation MCP](m
 ### SniparaClient
 
 ```python
-from rlm.tools.snipara import SniparaClient
+from snipara_sandbox.tools.snipara import SniparaClient
 
 client = SniparaClient(
     base_url: str = "https://api.snipara.com/mcp",
@@ -566,14 +566,14 @@ client = SniparaClient(
 ```
 
 **Méthodes :**
-- `from_config(config)` - Crée un client depuis la configuration RLM
+- `from_config(config)` - Crée un client depuis la configuration Snipara Sandbox
 - `call_tool(tool_name, arguments)` - Appelle un outil Snipara
 - `close()` - Ferme le client HTTP
 
 ### get_native_snipara_tools
 
 ```python
-from rlm.tools.snipara import get_native_snipara_tools
+from snipara_sandbox.tools.snipara import get_native_snipara_tools
 
 tools = get_native_snipara_tools(
     client: SniparaClient,

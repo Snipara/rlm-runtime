@@ -1,30 +1,30 @@
-# RLM Runtime Quickstart
+# Snipara Sandbox Quickstart
 
-Get started with RLM Runtime in 5 minutes.
+Get started with Snipara Sandbox in 5 minutes.
 
 ## Installation
 
 ```bash
 # Basic install
-pip install rlm-runtime
+pip install snipara-sandbox
 
 # With Docker support (recommended for production)
-pip install rlm-runtime[docker]
+pip install snipara-sandbox[docker]
 
 # With MCP server (for Claude Desktop/Code)
-pip install rlm-runtime[mcp]
+pip install snipara-sandbox[mcp]
 
 # With Snipara context optimization
-pip install rlm-runtime[snipara]
+pip install snipara-sandbox[snipara]
 
 # With WebAssembly support (no Docker required)
-pip install rlm-runtime[wasm]
+pip install snipara-sandbox[wasm]
 
 # With trajectory visualizer
-pip install rlm-runtime[visualizer]
+pip install snipara-sandbox[visualizer]
 
 # Everything
-pip install rlm-runtime[all]
+pip install snipara-sandbox[all]
 ```
 
 ## Setup
@@ -32,10 +32,10 @@ pip install rlm-runtime[all]
 ### 1. Initialize Configuration
 
 ```bash
-rlm init
+snipara-sandbox init
 ```
 
-This creates `rlm.toml` with default settings.
+This creates `snipara-sandbox.toml` with default settings.
 
 ### 2. Set API Keys
 
@@ -49,7 +49,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ### 3. Verify Setup
 
 ```bash
-rlm doctor
+snipara-sandbox doctor
 ```
 
 ## Basic Usage
@@ -58,28 +58,28 @@ rlm doctor
 
 ```bash
 # Simple completion
-rlm run "What is 2 + 2?"
+snipara-sandbox run "What is 2 + 2?"
 
 # With a specific model
-rlm run -m gpt-4o "Explain recursion"
+snipara-sandbox run -m gpt-4o "Explain recursion"
 
 # With Docker isolation
-rlm run --env docker "Parse data.csv and count rows"
+snipara-sandbox run --env docker "Parse data.csv and count rows"
 
 # Verbose mode (shows execution details)
-rlm run -v "Find all Python files in this directory"
+snipara-sandbox run -v "Find all Python files in this directory"
 ```
 
 ### Python API
 
 ```python
 import asyncio
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 async def main():
-    rlm = RLM(model="gpt-4o-mini")
+    sandbox = SniparaSandbox(model="gpt-4o-mini")
 
-    result = await rlm.completion("What is the capital of France?")
+    result = await sandbox.completion("What is the capital of France?")
     print(result.response)
     print(f"Tokens used: {result.total_tokens}")
 
@@ -88,15 +88,15 @@ asyncio.run(main())
 
 ## Code Execution
 
-RLM can execute Python code in a sandboxed environment:
+Snipara Sandbox can execute Python code in a sandboxed environment:
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 async def main():
-    rlm = RLM(environment="local")  # or "docker" for isolation
+    sandbox = SniparaSandbox(environment="local")  # or "docker" for isolation
 
-    result = await rlm.completion(
+    result = await sandbox.completion(
         "Read data.csv and calculate the average of the 'price' column"
     )
     print(result.response)
@@ -113,20 +113,20 @@ For intelligent context retrieval:
 pip install snipara-mcp
 
 # Set credentials
-export SNIPARA_API_KEY=rlm_...
+export SNIPARA_API_KEY=snp-...
 export SNIPARA_PROJECT_SLUG=my-project
 ```
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
-rlm = RLM(
-    snipara_api_key="rlm_...",
+sandbox = SniparaSandbox(
+    snipara_api_key="snp-...",
     snipara_project_slug="my-project",
 )
 
 # Now the LLM can query your documentation
-result = await rlm.completion("How does authentication work in this project?")
+result = await sandbox.completion("How does authentication work in this project?")
 ```
 
 ## Custom Tools
@@ -134,7 +134,7 @@ result = await rlm.completion("How does authentication work in this project?")
 Add your own tools:
 
 ```python
-from rlm import RLM, Tool
+from snipara_sandbox import SniparaSandbox, Tool
 
 async def get_weather(city: str) -> dict:
     # Your implementation
@@ -153,8 +153,8 @@ weather_tool = Tool(
     handler=get_weather,
 )
 
-rlm = RLM(tools=[weather_tool])
-result = await rlm.completion("What's the weather in Paris?")
+sandbox = SniparaSandbox(tools=[weather_tool])
+result = await sandbox.completion("What's the weather in Paris?")
 ```
 
 ## Docker Isolation
@@ -166,13 +166,13 @@ For untrusted inputs, use Docker:
 docker info
 
 # Run with Docker isolation
-rlm run --env docker "Process the uploaded file"
+snipara-sandbox run --env docker "Process the uploaded file"
 ```
 
 Or in Python:
 
 ```python
-rlm = RLM(environment="docker")
+sandbox = SniparaSandbox(environment="docker")
 ```
 
 ## WebAssembly Isolation
@@ -181,16 +181,16 @@ For environments without Docker, use WebAssembly:
 
 ```bash
 # Install WebAssembly support
-pip install rlm-runtime[wasm]
+pip install snipara-sandbox[wasm]
 
 # Run with WebAssembly isolation
-rlm run --env wasm "Process the data"
+snipara-sandbox run --env wasm "Process the data"
 ```
 
 Or in Python:
 
 ```python
-rlm = RLM(environment="wasm")
+sandbox = SniparaSandbox(environment="wasm")
 ```
 
 The WebAssembly environment uses Pyodide to run Python in a sandboxed WebAssembly runtime, providing isolation without requiring Docker.
@@ -201,9 +201,9 @@ For real-time output, use streaming:
 
 ```python
 async def main():
-    rlm = RLM(model="gpt-4o-mini")
+    sandbox = SniparaSandbox(model="gpt-4o-mini")
 
-    async for chunk in rlm.stream("Write a haiku about coding"):
+    async for chunk in sandbox.stream("Write a haiku about coding"):
         print(chunk, end="", flush=True)
 ```
 
@@ -213,13 +213,13 @@ Note: Streaming is for simple completions. Tool-using completions use the standa
 
 ```bash
 # List recent trajectories
-rlm logs
+snipara-sandbox logs
 
 # View specific trajectory
-rlm logs abc123-def456
+snipara-sandbox logs abc123-def456
 
 # JSON output for scripting
-rlm logs --json
+snipara-sandbox logs --json
 ```
 
 ## Trajectory Visualizer
@@ -228,13 +228,13 @@ Debug your completions with the web-based visualizer:
 
 ```bash
 # Install visualizer dependencies
-pip install rlm-runtime[visualizer]
+pip install snipara-sandbox[visualizer]
 
 # Launch the dashboard
-rlm visualize
+snipara-sandbox visualize
 
 # Custom port and log directory
-rlm visualize --dir ./my-logs --port 8080
+snipara-sandbox visualize --dir ./my-logs --port 8080
 ```
 
 The visualizer shows:

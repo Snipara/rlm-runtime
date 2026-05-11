@@ -1,7 +1,7 @@
-"""RLM Runtime - Recursive Language Model execution environment."""
+"""Legacy RLM import surface for Snipara Sandbox."""
 
 from rlm.core.config import RLMConfig, load_config
-from rlm.core.orchestrator import RLM
+from rlm.core.orchestrator import RLM, SniparaSandbox
 from rlm.core.types import (
     CompletionOptions,
     Message,
@@ -14,11 +14,16 @@ from rlm.core.types import (
 from rlm.tools.base import Tool
 from rlm.tools.registry import ToolRegistry
 
-__version__ = "2.1.3"
+__version__ = "2.2.0"
+
+SniparaSandboxConfig = RLMConfig
+Sandbox = SniparaSandbox
 
 __all__ = [
     # Main class
     "RLM",
+    "SniparaSandbox",
+    "Sandbox",
     # Types
     "CompletionOptions",
     "Message",
@@ -29,6 +34,7 @@ __all__ = [
     "TrajectoryEvent",
     # Config
     "RLMConfig",
+    "SniparaSandboxConfig",
     "load_config",
     # Tools
     "Tool",

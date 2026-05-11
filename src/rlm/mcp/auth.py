@@ -1,13 +1,13 @@
 """
-Authentication helpers for RLM MCP server.
+Authentication helpers for Snipara Sandbox MCP server.
 
 Integrates with Snipara's OAuth Device Flow tokens stored at ~/.snipara/tokens.json.
-This allows rlm-runtime to use Snipara authentication without manual API key setup.
+This allows Snipara Sandbox to use Snipara authentication without manual API key setup.
 
 Token resolution order:
 1. OAuth tokens from ~/.snipara/tokens.json (set by snipara-mcp-login)
 2. SNIPARA_API_KEY environment variable
-3. API key from rlm.toml config
+3. API key from snipara-sandbox.toml or legacy rlm.toml config
 """
 
 from __future__ import annotations
@@ -230,11 +230,11 @@ Snipara Authentication Options:
    - Status:  snipara-mcp-status
 
 2. API Key (Environment Variable):
-   - export SNIPARA_API_KEY=rlm_...
+   - export SNIPARA_API_KEY=snp-...
    - export SNIPARA_PROJECT_SLUG=your-project
 
-3. Config File (rlm.toml):
-   [snipara]
-   api_key = "rlm_..."
-   project_slug = "your-project"
+3. Config File (snipara-sandbox.toml):
+   [snipara_sandbox]
+   snipara_api_key = "snp-..."
+   snipara_project_slug = "your-project"
 """.strip()

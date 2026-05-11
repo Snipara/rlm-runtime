@@ -78,7 +78,9 @@ class AgentRunner:
             # Auto-context on first iteration
             system_prompt = AGENT_SYSTEM_PROMPT
             if self.config.auto_context:
-                snipara_tool = self.rlm.tool_registry.get("rlm_context_query")
+                snipara_tool = self.rlm.tool_registry.get(
+                    "snipara_context_query"
+                ) or self.rlm.tool_registry.get("rlm_context_query")
                 if snipara_tool:
                     try:
                         context = await snipara_tool.execute(

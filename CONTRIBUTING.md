@@ -1,6 +1,6 @@
-# Contributing to RLM Runtime
+# Contributing to Snipara Sandbox
 
-Thank you for your interest in contributing to RLM Runtime! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Snipara Sandbox! This document provides guidelines and information for contributors.
 
 ## Code of Conduct
 
@@ -12,8 +12,8 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ```bash
 # Clone the repository
-git clone https://github.com/alopez3006/rlm-runtime
-cd rlm-runtime
+git clone https://github.com/Snipara/snipara-sandbox
+cd snipara-sandbox
 
 # Create a virtual environment
 python -m venv venv
@@ -23,14 +23,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 
 # Verify setup
-rlm doctor
+snipara-sandbox doctor
 pytest
 ```
 
 ### Project Structure
 
 ```
-rlm-runtime/
+snipara-sandbox/
 ├── src/rlm/
 │   ├── backends/       # LLM backend adapters
 │   ├── cli/            # Command-line interface
@@ -195,7 +195,7 @@ def example_function(param1: str, param2: int = 10) -> dict[str, Any]:
 
 ```python
 import pytest
-from rlm.repl.local import LocalREPL
+from snipara_sandbox.repl.local import LocalREPL
 
 @pytest.fixture
 def repl():
@@ -243,7 +243,7 @@ We welcome contributions in these areas:
 
 Include:
 - Python version
-- RLM version (`rlm version`)
+- Snipara Sandbox version (`snipara-sandbox version`)
 - Steps to reproduce
 - Expected vs actual behavior
 - Error messages/logs

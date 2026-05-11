@@ -2,22 +2,22 @@
 """
 Snipara Integration Example
 
-This example demonstrates using RLM Runtime with Snipara
+This example demonstrates using Snipara Sandbox with Snipara
 for intelligent context retrieval and memory.
 """
 
 import asyncio
 
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 
 async def main():
     """Run Snipara integration examples."""
-    # Create RLM with Snipara configuration
+    # Create Snipara Sandbox with Snipara configuration
     # Get your API key from https://snipara.com/dashboard
-    rlm = RLM(
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
-        snipara_api_key="rlm_your_api_key_here",
+        snipara_api_key="snp-your-api-key-here",
         snipara_project_slug="your-project-slug",
         # Enable memory tools for persistent context
         # memory_enabled=True,
@@ -25,7 +25,7 @@ async def main():
 
     # Example 1: Query documentation
     print("=== Query Documentation ===")
-    result = await rlm.completion("""
+    result = await sandbox.completion("""
         How does the authentication system work in this codebase?
         Use the documentation to find:
         - Auth flow
@@ -37,7 +37,7 @@ async def main():
 
     # Example 2: Search for patterns
     print("=== Search for Patterns ===")
-    result = await rlm.completion("""
+    result = await sandbox.completion("""
         Find all error handling patterns in the codebase.
         Show examples of:
         - Try/except blocks
@@ -49,7 +49,7 @@ async def main():
 
     # Example 3: Code generation with context
     print("=== Code Generation with Context ===")
-    result = await rlm.completion("""
+    result = await sandbox.completion("""
         Create a new API endpoint for user registration.
         Follow the existing patterns from the documentation:
         - Use the same error handling
@@ -61,7 +61,7 @@ async def main():
 
     # Example 4: Team guidelines
     print("=== Team Guidelines ===")
-    result = await rlm.completion("""
+    result = await sandbox.completion("""
         What are the team's coding standards for this project?
         Include:
         - Code style guidelines
@@ -75,16 +75,16 @@ async def main():
 # Example with Memory (requires memory_enabled=True)
 async def memory_example():
     """Example using memory features."""
-    rlm = RLM(
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
-        snipara_api_key="rlm_your_api_key_here",
+        snipara_api_key="snp-your-api-key-here",
         snipara_project_slug="your-project-slug",
         memory_enabled=True,  # Enable memory tools
     )
 
     # Store a decision
     print("=== Store Memory ===")
-    result = await rlm.completion(
+    result = await sandbox.completion(
         "We decided to use PostgreSQL as our primary database "
         "because of its reliability and feature set."
     )
@@ -93,7 +93,7 @@ async def memory_example():
 
     # Later, recall the decision
     print("=== Recall Memory ===")
-    result = await rlm.completion("What database are we using for this project?")
+    result = await sandbox.completion("What database are we using for this project?")
     print(f"Response: {result.response}")
     print()
 

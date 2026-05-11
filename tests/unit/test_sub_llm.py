@@ -125,15 +125,17 @@ class TestGetSubLLMTools:
             total_cost_usd=cost,
         )
 
-    def test_returns_two_tools(self):
+    def test_returns_tools_with_legacy_aliases(self):
         rlm = self._make_mock_rlm()
         ctx = SubLLMContext()
         options = CompletionOptions(token_budget=8000)
 
         tools = get_sub_llm_tools(rlm, ctx, options, parent_tokens_used=0)
 
-        assert len(tools) == 2
+        assert len(tools) == 4
         names = [t.name for t in tools]
+        assert "snipara_sub_complete" in names
+        assert "snipara_batch_complete" in names
         assert "rlm_sub_complete" in names
         assert "rlm_batch_complete" in names
 
@@ -231,7 +233,7 @@ class TestGetSubLLMTools:
         snipara_tool = MagicMock()
         snipara_tool.execute = AsyncMock(return_value="Relevant documentation here")
         rlm.tool_registry.get.side_effect = lambda name: (
-            snipara_tool if name == "rlm_context_query" else None
+            snipara_tool if name == "snipara_context_query" else None
         )
 
         ctx = SubLLMContext()

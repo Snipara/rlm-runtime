@@ -18,7 +18,7 @@ class TestVersionCommand:
         result = runner.invoke(app, ["version"])
 
         assert result.exit_code == 0
-        assert "rlm-runtime" in result.stdout
+        assert "snipara-sandbox" in result.stdout
 
 
 class TestConfigCommand:
@@ -26,18 +26,22 @@ class TestConfigCommand:
 
     @patch("rlm.core.config.load_project_env", return_value=None)
     @patch("rlm.core.config.load_config")
-    def test_shows_effective_configuration(self, mock_load_config, _mock_load_project_env, tmp_path):
+    def test_shows_effective_configuration(
+        self, mock_load_config, _mock_load_project_env, tmp_path
+    ):
         """Should show the effective configuration."""
         from rlm.core.config import RLMConfig
 
         mock_load_config.return_value = RLMConfig.model_construct(
             model="test-model",
             api_key="sk-test",
-            snipara_api_key="rlm_test",
+            snipara_api_key="snp-test",
             snipara_project_slug="demo-project",
         )
 
-        result = runner.invoke(app, ["config", "show", "--config", str(tmp_path / "rlm.toml")])
+        result = runner.invoke(
+            app, ["config", "show", "--config", str(tmp_path / "snipara-sandbox.toml")]
+        )
 
         assert result.exit_code == 0
         assert "Effective Configuration" in result.stdout
@@ -50,11 +54,11 @@ class TestConfigCommand:
         """Should output JSON for config show."""
         from rlm.core.config import RLMConfig
 
-        config_path = tmp_path / "rlm.toml"
+        config_path = tmp_path / "snipara-sandbox.toml"
         mock_load_config.return_value = RLMConfig.model_construct(
             model="json-model",
             api_key="sk-test",
-            snipara_api_key="rlm_test",
+            snipara_api_key="snp-test",
             snipara_project_slug="json-project",
         )
 
@@ -74,18 +78,18 @@ class TestConfigCommand:
         result = runner.invoke(app, ["--version"])
 
         assert result.exit_code == 0
-        assert "rlm-runtime" in result.stdout
+        assert "snipara-sandbox" in result.stdout
 
 
 class TestInitCommand:
     """Tests for init command."""
 
     def test_creates_config_file(self, tmp_path):
-        """Should create rlm.toml in project directory."""
+        """Should create snipara-sandbox.toml in project directory."""
         result = runner.invoke(app, ["init", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert (tmp_path / "rlm.toml").exists()
+        assert (tmp_path / "snipara-sandbox.toml").exists()
 
     def test_creates_env_example(self, tmp_path):
         """Should create .env.example file."""
@@ -96,7 +100,7 @@ class TestInitCommand:
 
     def test_fails_if_config_exists(self, tmp_path):
         """Should fail if config exists without --force."""
-        config_file = tmp_path / "rlm.toml"
+        config_file = tmp_path / "snipara-sandbox.toml"
         config_file.write_text("existing config")
 
         result = runner.invoke(app, ["init", str(tmp_path)])
@@ -106,21 +110,21 @@ class TestInitCommand:
 
     def test_overwrites_with_force(self, tmp_path):
         """Should overwrite config with --force."""
-        config_file = tmp_path / "rlm.toml"
+        config_file = tmp_path / "snipara-sandbox.toml"
         config_file.write_text("old config")
 
         result = runner.invoke(app, ["init", str(tmp_path), "--force"])
 
         assert result.exit_code == 0
-        assert "[rlm]" in config_file.read_text()
+        assert "[snipara_sandbox]" in config_file.read_text()
 
     def test_no_snipara_skips_snipara_config(self, tmp_path):
         """Should skip Snipara config with --no-snipara."""
         result = runner.invoke(app, ["init", str(tmp_path), "--no-snipara"])
 
         assert result.exit_code == 0
-        content = (tmp_path / "rlm.toml").read_text()
-        assert "snipara" not in content.lower()
+        content = (tmp_path / "snipara-sandbox.toml").read_text()
+        assert "snipara_api_key" not in content
 
 
 class TestLogsCommand:
@@ -333,13 +337,13 @@ class TestInitCommandEdgeCases:
 
     def test_creates_config_with_force_overwrite(self, tmp_path):
         """Should overwrite existing config with --force."""
-        config_file = tmp_path / "rlm.toml"
+        config_file = tmp_path / "snipara-sandbox.toml"
         config_file.write_text("original content")
 
         result = runner.invoke(app, ["init", str(tmp_path), "--force"])
 
         assert result.exit_code == 0
-        assert "[rlm]" in config_file.read_text()
+        assert "[snipara_sandbox]" in config_file.read_text()
         assert "original content" not in config_file.read_text()
 
     def test_creates_config_with_snipara_by_default(self, tmp_path):
@@ -347,7 +351,7 @@ class TestInitCommandEdgeCases:
         result = runner.invoke(app, ["init", str(tmp_path)])
 
         assert result.exit_code == 0
-        content = (tmp_path / "rlm.toml").read_text()
+        content = (tmp_path / "snipara-sandbox.toml").read_text()
         assert "snipara" in content.lower()
 
     def test_respects_no_snipara_flag(self, tmp_path):
@@ -355,7 +359,7 @@ class TestInitCommandEdgeCases:
         result = runner.invoke(app, ["init", str(tmp_path), "--no-snipara"])
 
         assert result.exit_code == 0
-        content = (tmp_path / "rlm.toml").read_text()
+        content = (tmp_path / "snipara-sandbox.toml").read_text()
         assert "snipara_api_key" not in content
 
     def test_does_not_overwrite_existing_env_example(self, tmp_path):

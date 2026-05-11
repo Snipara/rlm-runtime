@@ -177,12 +177,12 @@ class TestGetSniparaAuth:
             with patch.dict(
                 os.environ,
                 {
-                    "SNIPARA_API_KEY": "rlm_test_key",
+                    "SNIPARA_API_KEY": "snp-test_key",
                     "SNIPARA_PROJECT_SLUG": "env-project",
                 },
             ):
                 auth_header, project_slug = get_snipara_auth()
-                assert auth_header == "rlm_test_key"
+                assert auth_header == "snp-test_key"
                 assert project_slug == "env-project"
 
     def test_returns_none_when_no_auth(self, tmp_path):
@@ -289,7 +289,7 @@ class TestGetAuthStatus:
     def test_shows_api_key_authentication(self, tmp_path):
         """Should show API key authentication."""
         with patch("rlm.mcp.auth.SNIPARA_TOKEN_FILE", tmp_path / "nonexistent.json"):
-            with patch.dict(os.environ, {"SNIPARA_API_KEY": "rlm_test"}):
+            with patch.dict(os.environ, {"SNIPARA_API_KEY": "snp-test"}):
                 status = get_auth_status()
                 assert status["authenticated"] is True
                 assert status["api_key_available"] is True
@@ -320,4 +320,4 @@ class TestFormatAuthInstructions:
     def test_includes_config_instructions(self):
         """Should include config file instructions."""
         result = format_auth_instructions()
-        assert "rlm.toml" in result
+        assert "snipara-sandbox.toml" in result

@@ -1,13 +1,13 @@
 # MCP Integration Guide
 
-RLM Runtime includes an MCP (Model Context Protocol) server that provides a sandboxed Python execution environment to Claude Desktop, Claude Code, and other MCP clients.
+Snipara Sandbox includes an MCP (Model Context Protocol) server that provides a sandboxed Python execution environment to Claude Desktop, Claude Code, and other MCP clients.
 
 **Zero API keys required** - Designed to work within Claude Code's billing. For Snipara context retrieval, use [snipara-mcp](https://pypi.org/project/snipara-mcp/) separately (with OAuth Device Flow authentication).
 
 ## Installation
 
 ```bash
-pip install rlm-runtime[mcp]
+pip install snipara-sandbox[mcp]
 ```
 
 ## Configuration
@@ -19,8 +19,8 @@ Add to your Claude Code MCP settings:
 ```json
 {
   "mcpServers": {
-    "rlm": {
-      "command": "rlm",
+    "snipara-sandbox": {
+      "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     }
   }
@@ -34,8 +34,8 @@ Add to `~/.claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "rlm": {
-      "command": "rlm",
+    "snipara-sandbox": {
+      "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     }
   }
@@ -139,11 +139,11 @@ The following are blocked for security:
 
 ## Using with Snipara
 
-RLM can access Snipara context retrieval and memory tools through two mechanisms.
+Snipara Sandbox can access Snipara context retrieval and memory tools through two mechanisms.
 
 ### Option A: Native Tools (Recommended)
 
-When using the RLM orchestrator (not just the MCP server), Snipara tools
+When using the Snipara Sandbox orchestrator (not just the MCP server), Snipara tools
 are registered automatically via the native HTTP client. Authenticate
 with OAuth or set `SNIPARA_API_KEY`:
 
@@ -153,24 +153,24 @@ snipara-mcp-login      # Opens browser
 snipara-mcp-status     # Verify
 
 # Or API key
-export SNIPARA_API_KEY=rlm_...
+export SNIPARA_API_KEY=snp-...
 export SNIPARA_PROJECT_SLUG=my-project
 ```
 
-This registers `rlm_context_query`, `rlm_search`, `rlm_sections`,
-`rlm_read`, and `rlm_shared_context` (plus memory tools if enabled).
+This registers `snipara_context_query`, `snipara_search`, `snipara_sections`,
+`snipara_read`, and `snipara_shared_context` (plus memory tools if enabled).
 No separate MCP server needed.
 
 ### Option B: Separate snipara-mcp Server
 
 For MCP-only setups (e.g., Claude Desktop without the orchestrator),
-run snipara-mcp as a separate server alongside rlm-runtime:
+run snipara-mcp as a separate server alongside snipara-sandbox:
 
 ```json
 {
   "mcpServers": {
-    "rlm": {
-      "command": "rlm",
+    "snipara-sandbox": {
+      "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     },
     "snipara": {
@@ -187,7 +187,7 @@ snipara-mcp-status     # Check status
 ```
 
 This provides:
-- **rlm-runtime**: Code execution sandbox (no API keys)
+- **snipara-sandbox**: Code execution sandbox (no API keys)
 - **snipara-mcp**: Context retrieval (OAuth authentication)
 
 See [Snipara Integration](snipara.md) for full details on tools and auth.
@@ -197,7 +197,7 @@ See [Snipara Integration](snipara.md) for full details on tools and auth.
 ### "MCP dependencies not installed"
 
 ```bash
-pip install rlm-runtime[mcp]
+pip install snipara-sandbox[mcp]
 ```
 
 ### MCP server not appearing in Claude
@@ -205,7 +205,7 @@ pip install rlm-runtime[mcp]
 1. Verify the config file path is correct
 2. Check JSON syntax is valid
 3. Restart Claude completely
-4. Check `rlm mcp-serve --help` works
+4. Check `snipara-sandbox mcp-serve --help` works
 
 ### "Import not allowed"
 
@@ -293,15 +293,15 @@ for i, user in enumerate(users):
 ```
 Claude Code (LLM + billing included)
     │
-    ├── rlm-runtime-mcp (code sandbox)
+    ├── snipara-sandbox-mcp (code sandbox)
     │   ├── execute_python
     │   ├── get_repl_context / set_repl_context / clear_repl_context
     │   └── list_sessions / destroy_session
     │
     ├── Native Snipara tools (via orchestrator, OAuth or API key)
-    │   ├── rlm_context_query, rlm_search, rlm_sections, rlm_read
-    │   ├── rlm_shared_context
-    │   └── rlm_remember/recall/memories/forget (if memory_enabled)
+    │   ├── snipara_context_query, snipara_search, snipara_sections, snipara_read
+    │   ├── snipara_shared_context
+    │   └── snipara_remember/recall/memories/forget (if memory_enabled)
     │
     └── snipara-mcp (optional separate server, OAuth auth)
         └── Backward-compatible fallback

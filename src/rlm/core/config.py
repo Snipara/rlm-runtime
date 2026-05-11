@@ -1,4 +1,4 @@
-"""RLM configuration management."""
+"""Snipara Sandbox configuration management."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -64,66 +64,123 @@ def get_profile(name: str) -> ExecutionProfile:
     return EXECUTION_PROFILES[name]
 
 
+def _sandbox_env(name: str) -> AliasChoices:
+    """Return the Snipara Sandbox env var name plus the legacy RLM fallback."""
+    return AliasChoices(f"SNIPARA_SANDBOX_{name}", f"RLM_{name}")
+
+
 class RLMConfig(BaseSettings):
-    """RLM runtime configuration.
+    """Snipara Sandbox runtime configuration.
 
     Configuration can be set via:
-    1. Environment variables (RLM_* prefix)
-    2. rlm.toml config file
+    1. Environment variables (SNIPARA_SANDBOX_* prefix, RLM_* legacy fallback)
+    2. snipara-sandbox.toml or legacy rlm.toml config file
     3. Direct instantiation
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="RLM_",
+        env_prefix="",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     # Backend settings
-    backend: str = "litellm"
-    model: str = "gpt-4o-mini"
-    temperature: float = 0.0
-    api_key: str | None = None  # For direct OpenAI/Anthropic
+    backend: str = Field(default="litellm", validation_alias=_sandbox_env("BACKEND"))
+    model: str = Field(default="gpt-4o-mini", validation_alias=_sandbox_env("MODEL"))
+    temperature: float = Field(default=0.0, validation_alias=_sandbox_env("TEMPERATURE"))
+    api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("SNIPARA_SANDBOX_LLM_API_KEY", "RLM_API_KEY"),
+    )  # For direct OpenAI/Anthropic
 
     # Environment settings
-    environment: str = "local"
-    trust_level: str = "sandboxed"  # sandboxed | docker | local
-    docker_image: str = "python:3.11-slim"
-    docker_cpus: float = 1.0
-    docker_memory: str = "512m"
-    docker_network_disabled: bool = True
-    docker_timeout: int = 30
+    environment: str = Field(default="local", validation_alias=_sandbox_env("ENVIRONMENT"))
+    trust_level: str = Field(
+        default="sandboxed", validation_alias=_sandbox_env("TRUST_LEVEL")
+    )  # sandboxed | docker | local
+    docker_image: str = Field(
+        default="python:3.11-slim", validation_alias=_sandbox_env("DOCKER_IMAGE")
+    )
+    docker_cpus: float = Field(default=1.0, validation_alias=_sandbox_env("DOCKER_CPUS"))
+    docker_memory: str = Field(default="512m", validation_alias=_sandbox_env("DOCKER_MEMORY"))
+    docker_network_disabled: bool = Field(
+        default=True, validation_alias=_sandbox_env("DOCKER_NETWORK_DISABLED")
+    )
+    docker_timeout: int = Field(default=30, validation_alias=_sandbox_env("DOCKER_TIMEOUT"))
 
     # Limits
-    max_depth: int = 4
-    max_subcalls: int = 12
-    token_budget: int = 8000
-    tool_budget: int = 20
-    timeout_seconds: int = 300  # 5 minutes default (increased from 2 for agentic tasks)
-    parallel_tools: bool = False
-    max_parallel: int = 5
+    max_depth: int = Field(default=4, validation_alias=_sandbox_env("MAX_DEPTH"))
+    max_subcalls: int = Field(default=12, validation_alias=_sandbox_env("MAX_SUBCALLS"))
+    token_budget: int = Field(default=8000, validation_alias=_sandbox_env("TOKEN_BUDGET"))
+    tool_budget: int = Field(default=20, validation_alias=_sandbox_env("TOOL_BUDGET"))
+    timeout_seconds: int = Field(
+        default=300, validation_alias=_sandbox_env("TIMEOUT_SECONDS")
+    )  # 5 minutes default (increased from 2 for agentic tasks)
+    parallel_tools: bool = Field(default=False, validation_alias=_sandbox_env("PARALLEL_TOOLS"))
+    max_parallel: int = Field(default=5, validation_alias=_sandbox_env("MAX_PARALLEL"))
 
     # Sub-LLM Orchestration
-    sub_calls_enabled: bool = True
-    sub_calls_max_per_turn: int = 5
-    sub_calls_budget_inheritance: float = 0.5  # Fraction of parent's remaining budget
-    sub_calls_max_cost_per_session: float = 1.0  # Max dollar cost for sub-calls per session
+    sub_calls_enabled: bool = Field(
+        default=True, validation_alias=_sandbox_env("SUB_CALLS_ENABLED")
+    )
+    sub_calls_max_per_turn: int = Field(
+        default=5, validation_alias=_sandbox_env("SUB_CALLS_MAX_PER_TURN")
+    )
+    sub_calls_budget_inheritance: float = Field(
+        default=0.5, validation_alias=_sandbox_env("SUB_CALLS_BUDGET_INHERITANCE")
+    )  # Fraction of parent's remaining budget
+    sub_calls_max_cost_per_session: float = Field(
+        default=1.0, validation_alias=_sandbox_env("SUB_CALLS_MAX_COST_PER_SESSION")
+    )  # Max dollar cost for sub-calls per session
 
     # Security: File access restrictions
     # Paths that file tools can access. Empty list means current directory only.
-    allowed_paths: list[Path] = Field(default_factory=list)
+    allowed_paths: list[Path] = Field(
+        default_factory=list, validation_alias=_sandbox_env("ALLOWED_PATHS")
+    )
 
     # Logging
-    log_dir: Path = Field(default_factory=lambda: Path("./logs"))
-    verbose: bool = False
-    log_level: str = "INFO"
+    log_dir: Path = Field(
+        default_factory=lambda: Path("./logs"), validation_alias=_sandbox_env("LOG_DIR")
+    )
+    verbose: bool = Field(default=False, validation_alias=_sandbox_env("VERBOSE"))
+    log_level: str = Field(default="INFO", validation_alias=_sandbox_env("LOG_LEVEL"))
 
     # Snipara integration (optional)
-    snipara_api_key: str | None = Field(default=None, alias="SNIPARA_API_KEY")
-    snipara_project_slug: str | None = Field(default=None, alias="SNIPARA_PROJECT_SLUG")
-    snipara_base_url: str = "https://api.snipara.com/mcp"
-    memory_enabled: bool = False  # Enable Snipara memory tools (rlm_remember, rlm_recall)
+    snipara_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "SNIPARA_API_KEY",
+            "SNIPARA_SANDBOX_SNIPARA_API_KEY",
+            "RLM_SNIPARA_API_KEY",
+        ),
+    )
+    snipara_project_slug: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "SNIPARA_PROJECT_SLUG",
+            "SNIPARA_SANDBOX_SNIPARA_PROJECT_SLUG",
+            "RLM_SNIPARA_PROJECT_SLUG",
+        ),
+    )
+    snipara_base_url: str = Field(
+        default="https://api.snipara.com/mcp",
+        validation_alias=AliasChoices(
+            "SNIPARA_BASE_URL",
+            "SNIPARA_SANDBOX_SNIPARA_BASE_URL",
+            "RLM_SNIPARA_BASE_URL",
+        ),
+    )
+    memory_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "SNIPARA_MEMORY_ENABLED",
+            "SNIPARA_SANDBOX_MEMORY_ENABLED",
+            "RLM_MEMORY_ENABLED",
+        ),
+    )  # Enable Snipara memory tools.
 
     @property
     def snipara_enabled(self) -> bool:
@@ -206,7 +263,7 @@ def load_config(config_path: Path | None = None) -> RLMConfig:
     3. Default values
 
     Args:
-        config_path: Optional path to rlm.toml config file
+        config_path: Optional path to a Snipara Sandbox config file.
 
     Returns:
         RLMConfig instance
@@ -217,10 +274,12 @@ def load_config(config_path: Path | None = None) -> RLMConfig:
     # requiring python-dotenv to be installed.
     load_project_env(config_path.parent if config_path else Path.cwd())
 
-    # Try to load from config file
+    # Try to load from config file. Prefer the Snipara Sandbox filename while
+    # continuing to read rlm.toml for existing projects.
     if config_path is None:
-        # Look for rlm.toml in current directory
-        config_path = Path("rlm.toml")
+        config_path = Path("snipara-sandbox.toml")
+        if not config_path.exists() and Path("rlm.toml").exists():
+            config_path = Path("rlm.toml")
 
     if config_path.exists():
         try:
@@ -228,7 +287,7 @@ def load_config(config_path: Path | None = None) -> RLMConfig:
 
             with open(config_path, "rb") as f:
                 toml_data = tomllib.load(f)
-            config_data = toml_data.get("rlm", {})
+            config_data = toml_data.get("snipara_sandbox", toml_data.get("rlm", {}))
         except ImportError:
             # Python < 3.11, try tomli
             try:
@@ -236,7 +295,7 @@ def load_config(config_path: Path | None = None) -> RLMConfig:
 
                 with open(config_path, "rb") as f:
                     toml_data = tomli.load(f)
-                config_data = toml_data.get("rlm", {})
+                config_data = toml_data.get("snipara_sandbox", toml_data.get("rlm", {}))
             except ImportError:
                 pass  # No TOML library available, use defaults
 
@@ -251,9 +310,9 @@ def save_config(config: RLMConfig, config_path: Path) -> None:
         config_path: Path to save the config file
     """
     lines = [
-        "# RLM Runtime Configuration",
+        "# Snipara Sandbox Configuration",
         "",
-        "[rlm]",
+        "[snipara_sandbox]",
         f'backend = "{config.backend}"',
         f'model = "{config.model}"',
         f"temperature = {config.temperature}",
@@ -279,7 +338,7 @@ def save_config(config: RLMConfig, config_path: Path) -> None:
     if config.snipara_api_key:
         lines.append(f'snipara_api_key = "{config.snipara_api_key}"')
     else:
-        lines.append('# snipara_api_key = "rlm_..."')
+        lines.append('# snipara_api_key = "snp-..."')
 
     if config.snipara_project_slug:
         lines.append(f'snipara_project_slug = "{config.snipara_project_slug}"')

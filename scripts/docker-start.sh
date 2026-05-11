@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Start RLM Docker REPL container
+# Start Snipara Sandbox Docker REPL container
 set -euo pipefail
 
 # Configuration
-IMAGE="${RLM_DOCKER_IMAGE:-rlm-runtime:latest}"
-CONTAINER_NAME="rlm-repl"
+IMAGE="${SNIPARA_SANDBOX_DOCKER_IMAGE:-${RLM_DOCKER_IMAGE:-snipara-sandbox:latest}}"
+CONTAINER_NAME="snipara-sandbox-repl"
 WORKDIR="${1:-$PWD}"
-CPUS="${RLM_DOCKER_CPUS:-1.0}"
-MEMORY="${RLM_DOCKER_MEMORY:-512m}"
+CPUS="${SNIPARA_SANDBOX_DOCKER_CPUS:-${RLM_DOCKER_CPUS:-1.0}}"
+MEMORY="${SNIPARA_SANDBOX_DOCKER_MEMORY:-${RLM_DOCKER_MEMORY:-512m}}"
 
 # Check Docker is available
 if ! command -v docker &> /dev/null; then
@@ -23,7 +23,7 @@ fi
 
 # Build image if it doesn't exist
 if ! docker image inspect "$IMAGE" &> /dev/null; then
-    echo "Building RLM Docker image..."
+    echo "Building Snipara Sandbox Docker image..."
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     docker build -t "$IMAGE" -f "$SCRIPT_DIR/../docker/Dockerfile" "$SCRIPT_DIR/.."
 fi
@@ -39,7 +39,7 @@ if docker ps -aq -f name="$CONTAINER_NAME" | grep -q .; then
     docker rm "$CONTAINER_NAME" > /dev/null
 fi
 
-echo "Starting RLM REPL container..."
+echo "Starting Snipara Sandbox REPL container..."
 echo "  Image: $IMAGE"
 echo "  Workdir: $WORKDIR"
 echo "  CPUs: $CPUS"

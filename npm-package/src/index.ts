@@ -1,11 +1,11 @@
 /**
- * RLM Runtime TypeScript SDK
+ * Snipara Sandbox TypeScript SDK
  *
- * Provides types and utilities for working with RLM Runtime MCP tools.
+ * Provides types and utilities for working with Snipara Sandbox MCP tools.
  *
  * @example
  * ```typescript
- * import type { ExecutePythonParams, REPLResult } from '@rlm/runtime';
+ * import type { ExecutePythonParams, REPLResult } from '@snipara/sandbox';
  *
  * const params: ExecutePythonParams = {
  *   code: 'print(2 + 2)',
@@ -117,7 +117,7 @@ export interface DestroySessionParams {
 }
 
 /**
- * Parameters for rlm_agent_run MCP tool.
+ * Parameters for snipara_agent_run MCP tool.
  */
 export interface AgentRunParams {
   /** The task for the agent to solve */
@@ -131,15 +131,15 @@ export interface AgentRunParams {
 }
 
 /**
- * Parameters for rlm_agent_status MCP tool.
+ * Parameters for snipara_agent_status MCP tool.
  */
 export interface AgentStatusParams {
-  /** The agent run ID from rlm_agent_run */
+  /** The agent run ID from snipara_agent_run */
   run_id: string;
 }
 
 /**
- * Parameters for rlm_agent_cancel MCP tool.
+ * Parameters for snipara_agent_cancel MCP tool.
  */
 export interface AgentCancelParams {
   /** The agent run ID to cancel */
@@ -220,7 +220,7 @@ export interface AgentResult {
 }
 
 /**
- * Agent run response from rlm_agent_run.
+ * Agent run response from snipara_agent_run.
  */
 export interface AgentRunResponse {
   /** Run ID for checking status */
@@ -238,7 +238,7 @@ export interface AgentRunResponse {
 }
 
 /**
- * Agent status response from rlm_agent_status.
+ * Agent status response from snipara_agent_status.
  */
 export interface AgentStatusResponse {
   /** Run ID */
@@ -267,9 +267,9 @@ export const MCP_TOOLS = {
   CLEAR_REPL_CONTEXT: 'clear_repl_context',
   LIST_SESSIONS: 'list_sessions',
   DESTROY_SESSION: 'destroy_session',
-  AGENT_RUN: 'rlm_agent_run',
-  AGENT_STATUS: 'rlm_agent_status',
-  AGENT_CANCEL: 'rlm_agent_cancel',
+  AGENT_RUN: 'snipara_agent_run',
+  AGENT_STATUS: 'snipara_agent_status',
+  AGENT_CANCEL: 'snipara_agent_cancel',
 } as const;
 
 export type MCPToolName = typeof MCP_TOOLS[keyof typeof MCP_TOOLS];
@@ -279,9 +279,9 @@ export type MCPToolName = typeof MCP_TOOLS[keyof typeof MCP_TOOLS];
 // ============================================================================
 
 /**
- * RLM Runtime configuration.
+ * Snipara Sandbox configuration.
  */
-export interface RLMConfig {
+export interface SniparaSandboxConfig {
   /** Backend: litellm | openai | anthropic */
   backend: string;
   /** Model name */
@@ -300,10 +300,13 @@ export interface RLMConfig {
   memory_enabled: boolean;
 }
 
+/** Legacy alias kept for existing TypeScript consumers. */
+export type RLMConfig = SniparaSandboxConfig;
+
 /**
  * Default configuration values.
  */
-export const DEFAULT_CONFIG: RLMConfig = {
+export const DEFAULT_CONFIG: SniparaSandboxConfig = {
   backend: 'litellm',
   model: 'gpt-4o-mini',
   temperature: 0.0,

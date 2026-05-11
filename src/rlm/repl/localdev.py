@@ -12,7 +12,7 @@ Never expose this to untrusted code or remote users.
 
 Requires explicit opt-in via:
 - Config: trust_level = "local"
-- Environment: RLM_TRUST_LEVEL=local
+- Environment: SNIPARA_SANDBOX_TRUST_LEVEL=local
 """
 
 from __future__ import annotations

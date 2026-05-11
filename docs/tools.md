@@ -1,14 +1,14 @@
 # Tool Development Guide
 
-Learn how to create custom tools for RLM Runtime.
+Learn how to create custom tools for Snipara Sandbox.
 
 ## Overview
 
-Tools allow LLMs to interact with external systems, execute code, and access data. RLM comes with builtin tools and supports custom tool development.
+Tools allow LLMs to interact with external systems, execute code, and access data. Snipara Sandbox comes with builtin tools and supports custom tool development.
 
 ## Builtin Tools
 
-RLM includes these builtin tools:
+Snipara Sandbox includes these builtin tools:
 
 | Tool | Description |
 |------|-------------|
@@ -22,25 +22,25 @@ When Snipara is configured (via OAuth, API key, or `snipara-mcp`), additional to
 
 | Tool | Description |
 |------|-------------|
-| `rlm_context_query` | Semantic/keyword/hybrid doc search |
-| `rlm_search` | Regex pattern search across docs |
-| `rlm_sections` | List indexed doc sections with pagination |
-| `rlm_read` | Read specific lines from documentation |
+| `snipara_context_query` | Semantic/keyword/hybrid doc search |
+| `snipara_search` | Regex pattern search across docs |
+| `snipara_sections` | List indexed doc sections with pagination |
+| `snipara_read` | Read specific lines from documentation |
 
 **Tier 2 — Memory** (when `memory_enabled = true`):
 
 | Tool | Description |
 |------|-------------|
-| `rlm_remember` | Store a memory for later recall |
-| `rlm_recall` | Semantic recall by query |
-| `rlm_memories` | List memories with filters |
-| `rlm_forget` | Delete memories by ID/type/category/age |
+| `snipara_remember` | Store a memory for later recall |
+| `snipara_recall` | Semantic recall by query |
+| `snipara_memories` | List memories with filters |
+| `snipara_forget` | Delete memories by ID/type/category/age |
 
 **Tier 3 — Advanced** (always registered):
 
 | Tool | Description |
 |------|-------------|
-| `rlm_shared_context` | Merged team docs with budget allocation |
+| `snipara_shared_context` | Merged team docs with budget allocation |
 
 See [Snipara Integration](snipara.md) for full parameter details.
 
@@ -49,8 +49,8 @@ See [Snipara Integration](snipara.md) for full parameter details.
 ### Basic Tool Structure
 
 ```python
-from rlm import RLM
-from rlm.backends.base import Tool
+from snipara_sandbox import SniparaSandbox
+from snipara_sandbox.backends.base import Tool
 
 # 1. Define the handler function
 async def get_weather(city: str, units: str = "celsius") -> dict:
@@ -86,14 +86,14 @@ weather_tool = Tool(
     handler=get_weather,
 )
 
-# 3. Register with RLM
-rlm = RLM(
+# 3. Register with Snipara Sandbox
+sandbox = SniparaSandbox(
     model="gpt-4o-mini",
     tools=[weather_tool],
 )
 
 # 4. Use in completion
-result = await rlm.completion("What's the weather in Paris?")
+result = await sandbox.completion("What's the weather in Paris?")
 ```
 
 ### Tool Parameters Schema
@@ -166,7 +166,7 @@ def calculate(a: int, b: int) -> int:
 Return errors gracefully for better LLM feedback:
 
 ```python
-from rlm.core.exceptions import ToolExecutionError
+from snipara_sandbox.core.exceptions import ToolExecutionError
 
 async def database_query(query: str) -> dict:
     try:
@@ -237,14 +237,14 @@ async def analyze_code(content: str) -> dict:
     return {"lines": len(content.split('\n')), "complexity": "medium"}
 
 # Register all tools
-rlm = RLM(tools=[
+sandbox = SniparaSandbox(tools=[
     Tool(name="search_files", ...),
     Tool(name="read_file", ...),
     Tool(name="analyze_code", ...),
 ])
 
 # LLM can chain: search -> read -> analyze
-result = await rlm.completion(
+result = await sandbox.completion(
     "Find all Python files and analyze their complexity"
 )
 ```
@@ -253,16 +253,16 @@ result = await rlm.completion(
 
 ```python
 # Register tools after initialization
-rlm = RLM(model="gpt-4o-mini")
+sandbox = SniparaSandbox(model="gpt-4o-mini")
 
 # Add tool later
-rlm.tool_registry.register(my_tool)
+sandbox.tool_registry.register(my_tool)
 
 # Remove tool
-rlm.tool_registry.unregister("my_tool")
+sandbox.tool_registry.unregister("my_tool")
 
 # List all tools
-tools = rlm.tool_registry.get_all()
+tools = sandbox.tool_registry.get_all()
 for tool in tools:
     print(f"{tool.name}: {tool.description}")
 ```
@@ -378,7 +378,7 @@ class RateLimitedTool:
 
 ```python
 import pytest
-from rlm.backends.base import Tool
+from snipara_sandbox.backends.base import Tool
 
 @pytest.fixture
 def weather_tool():
@@ -404,21 +404,21 @@ async def test_weather_tool(weather_tool):
 
 @pytest.mark.asyncio
 async def test_weather_tool_integration():
-    rlm = RLM(tools=[weather_tool])
-    result = await rlm.completion("What's the weather in Paris?")
+    sandbox = SniparaSandbox(tools=[weather_tool])
+    result = await sandbox.completion("What's the weather in Paris?")
     assert "Paris" in result.response or "20" in result.response
 ```
 
 ## MCP Tool Integration
 
-Tools registered with RLM are automatically available in the MCP server:
+Tools registered with Snipara Sandbox are automatically available in the MCP server:
 
 ```python
 # Your custom tools work in Claude Desktop/Code
-rlm = RLM(tools=[my_custom_tool])
+sandbox = SniparaSandbox(tools=[my_custom_tool])
 
 # Start MCP server (tools are exposed)
-# rlm mcp-serve
+# snipara-sandbox mcp-serve
 ```
 
 ## Example: Complete Tool
@@ -427,8 +427,8 @@ rlm = RLM(tools=[my_custom_tool])
 """Example: GitHub Issues Tool"""
 
 import httpx
-from rlm import RLM
-from rlm.backends.base import Tool
+from snipara_sandbox import SniparaSandbox
+from snipara_sandbox.backends.base import Tool
 
 class GitHubTool:
     def __init__(self, token: str):
@@ -502,12 +502,12 @@ class GitHubTool:
 
 # Usage
 github = GitHubTool(token="ghp_...")
-rlm = RLM(
+sandbox = SniparaSandbox(
     model="gpt-4o-mini",
     tools=[github.as_tool()]
 )
 
-result = await rlm.completion(
+result = await sandbox.completion(
     "List the open issues in the facebook/react repository"
 )
 ```

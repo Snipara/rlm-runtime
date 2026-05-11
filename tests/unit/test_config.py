@@ -1,4 +1,4 @@
-"""Tests for RLM configuration management."""
+"""Tests for Snipara Sandbox configuration management."""
 
 import os
 from pathlib import Path
@@ -7,7 +7,7 @@ from rlm.core.config import RLMConfig, load_config, save_config
 
 
 class TestRLMConfig:
-    """Tests for RLMConfig class."""
+    """Tests for the legacy RLMConfig class alias."""
 
     def test_default_values(self):
         """Should have sensible defaults."""
@@ -81,7 +81,7 @@ class TestSniparaIntegration:
 
     def test_snipara_enabled_with_credentials(self, monkeypatch):
         """Should be enabled when both key and slug are set via env."""
-        monkeypatch.setenv("SNIPARA_API_KEY", "rlm_test")
+        monkeypatch.setenv("SNIPARA_API_KEY", "snp-test")
         monkeypatch.setenv("SNIPARA_PROJECT_SLUG", "my-project")
 
         config = RLMConfig()
@@ -89,7 +89,7 @@ class TestSniparaIntegration:
 
     def test_snipara_disabled_without_slug(self, monkeypatch):
         """Should be disabled when slug is missing."""
-        monkeypatch.setenv("SNIPARA_API_KEY", "rlm_test")
+        monkeypatch.setenv("SNIPARA_API_KEY", "snp-test")
         monkeypatch.delenv("SNIPARA_PROJECT_SLUG", raising=False)
 
         config = RLMConfig()
@@ -105,7 +105,7 @@ class TestSniparaIntegration:
 
     def test_get_snipara_url_when_enabled(self, monkeypatch):
         """Should return URL when enabled."""
-        monkeypatch.setenv("SNIPARA_API_KEY", "rlm_test")
+        monkeypatch.setenv("SNIPARA_API_KEY", "snp-test")
         monkeypatch.setenv("SNIPARA_PROJECT_SLUG", "my-project")
 
         config = RLMConfig()
@@ -145,11 +145,12 @@ class TestLoadConfig:
         monkeypatch.chdir(tmp_path)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         monkeypatch.delenv("RLM_MODEL", raising=False)
+        monkeypatch.delenv("SNIPARA_SANDBOX_MODEL", raising=False)
 
         (tmp_path / ".env").write_text(
             """
 OPENAI_API_KEY=sk-test-from-dotenv
-RLM_MODEL=claude-3-haiku
+SNIPARA_SANDBOX_MODEL=claude-3-haiku
 """
         )
 
@@ -221,6 +222,8 @@ max_depth = 4
         (tmp_path / "rlm.toml").write_text(toml_content)
 
         # Set env vars BEFORE loading config
+        monkeypatch.delenv("SNIPARA_SANDBOX_MODEL", raising=False)
+        monkeypatch.delenv("SNIPARA_SANDBOX_MAX_DEPTH", raising=False)
         monkeypatch.setenv("RLM_MODEL", "claude-3-opus")
         monkeypatch.setenv("RLM_MAX_DEPTH", "10")
 
@@ -271,7 +274,7 @@ class TestSaveConfig:
 
     def test_saves_snipara_credentials(self, tmp_path, monkeypatch):
         """Should save Snipara credentials when set."""
-        monkeypatch.setenv("SNIPARA_API_KEY", "rlm_secret")
+        monkeypatch.setenv("SNIPARA_API_KEY", "snp-secret")
         monkeypatch.setenv("SNIPARA_PROJECT_SLUG", "my-project")
 
         config = RLMConfig()
@@ -280,7 +283,7 @@ class TestSaveConfig:
         save_config(config, config_path)
 
         content = config_path.read_text()
-        assert 'snipara_api_key = "rlm_secret"' in content
+        assert 'snipara_api_key = "snp-secret"' in content
         assert 'snipara_project_slug = "my-project"' in content
 
     def test_comments_out_snipara_when_not_set(self, tmp_path, monkeypatch):
@@ -293,7 +296,7 @@ class TestSaveConfig:
         save_config(config, config_path)
 
         content = config_path.read_text()
-        assert '# snipara_api_key = "rlm_..."' in content
+        assert '# snipara_api_key = "snp-..."' in content
         assert '# snipara_project_slug = "your-project"' in content
 
     def test_roundtrip_config(self, tmp_path, monkeypatch):
@@ -322,11 +325,11 @@ class TestSaveConfig:
 class TestEnvironmentVariables:
     """Tests for environment variable configuration."""
 
-    def test_env_prefix(self, monkeypatch):
-        """Should use RLM_ prefix for env vars."""
-        monkeypatch.setenv("RLM_MODEL", "custom-model")
-        monkeypatch.setenv("RLM_MAX_DEPTH", "10")
-        monkeypatch.setenv("RLM_VERBOSE", "true")
+    def test_snipara_sandbox_env_prefix(self, monkeypatch):
+        """Should use SNIPARA_SANDBOX_ prefix for env vars."""
+        monkeypatch.setenv("SNIPARA_SANDBOX_MODEL", "custom-model")
+        monkeypatch.setenv("SNIPARA_SANDBOX_MAX_DEPTH", "10")
+        monkeypatch.setenv("SNIPARA_SANDBOX_VERBOSE", "true")
 
         config = RLMConfig()
 
@@ -334,11 +337,23 @@ class TestEnvironmentVariables:
         assert config.max_depth == 10
         assert config.verbose is True
 
+    def test_legacy_rlm_env_prefix(self, monkeypatch):
+        """Should keep RLM_ env vars as migration aliases."""
+        monkeypatch.delenv("SNIPARA_SANDBOX_MODEL", raising=False)
+        monkeypatch.delenv("SNIPARA_SANDBOX_MAX_DEPTH", raising=False)
+        monkeypatch.setenv("RLM_MODEL", "legacy-model")
+        monkeypatch.setenv("RLM_MAX_DEPTH", "9")
+
+        config = RLMConfig()
+
+        assert config.model == "legacy-model"
+        assert config.max_depth == 9
+
     def test_docker_env_vars(self, monkeypatch):
         """Should load Docker settings from env vars."""
-        monkeypatch.setenv("RLM_DOCKER_IMAGE", "python:3.10")
-        monkeypatch.setenv("RLM_DOCKER_CPUS", "0.5")
-        monkeypatch.setenv("RLM_DOCKER_MEMORY", "256m")
+        monkeypatch.setenv("SNIPARA_SANDBOX_DOCKER_IMAGE", "python:3.10")
+        monkeypatch.setenv("SNIPARA_SANDBOX_DOCKER_CPUS", "0.5")
+        monkeypatch.setenv("SNIPARA_SANDBOX_DOCKER_MEMORY", "256m")
 
         config = RLMConfig()
 
@@ -348,11 +363,11 @@ class TestEnvironmentVariables:
 
     def test_snipara_env_alias(self, monkeypatch):
         """Should support SNIPARA_* env var aliases."""
-        monkeypatch.setenv("SNIPARA_API_KEY", "rlm_from_env")
+        monkeypatch.setenv("SNIPARA_API_KEY", "snp-from-env")
         monkeypatch.setenv("SNIPARA_PROJECT_SLUG", "env-project")
 
         config = RLMConfig()
 
-        assert config.snipara_api_key == "rlm_from_env"
+        assert config.snipara_api_key == "snp-from-env"
         assert config.snipara_project_slug == "env-project"
         assert config.snipara_enabled is True

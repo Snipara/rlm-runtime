@@ -53,7 +53,7 @@ docs/
 **Good Example:**
 ```markdown
 ## API Reference
-### RLM Class
+### Snipara Sandbox Class
 #### completion() Method
 ```
 
@@ -93,12 +93,12 @@ docs/
 """Brief description of what this example demonstrates."""
 
 # Setup
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 # Main example
 async def main():
-    rlm = RLM(model="gpt-4o-mini")
-    result = await rlm.completion("Your prompt")
+    sandbox = SniparaSandbox(model="gpt-4o-mini")
+    result = await sandbox.completion("Your prompt")
     print(result.response)
 
 # Run
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 **Requirement:** Terms are used consistently across docs.
 
 **Checklist:**
-- [ ] "RLM" vs "RLM Runtime" - consistent usage
+- [ ] "Snipara Sandbox" vs "Snipara Sandbox" - consistent usage
 - [ ] "completion" vs "inference" - consistent
 - [ ] "REPL" vs "sandbox" - consistent
 - [ ] Technical terms defined in glossary
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 ```markdown
 ## Error Handling
 
-RLM uses a comprehensive exception hierarchy for clear error handling.
+Snipara Sandbox uses a comprehensive exception hierarchy for clear error handling.
 
 ### Exception Types
 
@@ -197,7 +197,7 @@ See [Testing Documentation](testing.md) for error handling examples.
 **Requirement:** External references are versioned.
 
 **Checklist:**
-- [ ] PyPI versions pinned: `rlm-runtime==2.0.0`
+- [ ] PyPI versions pinned: `snipara-sandbox==2.0.0`
 - [ ] Docker images tagged: `python:3.11-slim`
 - [ ] API versions specified: `OpenAI API v1`
 - [ ] Dependencies have version constraints

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# One-line installer for RLM Runtime
+# One-line installer for Snipara Sandbox
 set -euo pipefail
 
-echo "Installing RLM Runtime..."
+echo "Installing Snipara Sandbox..."
 
 # Check Python version
 PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
@@ -40,23 +40,23 @@ done
 # Install package
 if [ -n "$EXTRAS" ]; then
     EXTRAS="${EXTRAS#,}"  # Remove leading comma
-    pip install "rlm-runtime[$EXTRAS]"
+    pip install "snipara-sandbox[$EXTRAS]"
 else
-    pip install rlm-runtime
+    pip install snipara-sandbox
 fi
 
 echo ""
 echo "Installation complete!"
 echo ""
 echo "Quick start:"
-echo "  rlm init           # Initialize config"
-echo "  rlm run 'prompt'   # Run a completion"
-echo "  rlm doctor         # Check setup"
+echo "  snipara-sandbox init           # Initialize config"
+echo "  snipara-sandbox run 'prompt'   # Run a completion"
+echo "  snipara-sandbox doctor         # Check setup"
 echo ""
 echo "For Docker isolation (recommended):"
-echo "  pip install 'rlm-runtime[docker]'"
-echo "  rlm run --env docker 'prompt'"
+echo "  pip install 'snipara-sandbox[docker]'"
+echo "  snipara-sandbox run --env docker 'prompt'"
 echo ""
 echo "For Snipara context optimization:"
-echo "  pip install 'rlm-runtime[snipara]'"
+echo "  pip install 'snipara-sandbox[snipara]'"
 echo "  # Set SNIPARA_API_KEY and SNIPARA_PROJECT_SLUG"

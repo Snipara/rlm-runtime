@@ -33,8 +33,8 @@ Credentials are resolved top-down; the first match wins:
    copying needed.
 2. **SNIPARA_API_KEY** environment variable — for open-source or
    non-Snipara users who prefer plain API keys.
-3. **snipara_api_key** field in ``rlm.toml`` config — last resort
-   static configuration.
+3. **snipara_api_key** field in ``snipara-sandbox.toml`` or legacy
+   ``rlm.toml`` config — last resort static configuration.
 
 If none of the above are available, ``SniparaClient.from_config()``
 returns ``None`` and the orchestrator falls through to the
@@ -46,11 +46,13 @@ Tool Tiers
 Tools are organised in three tiers to control what the LLM can access:
 
 * **Tier 1 — Context retrieval** (always registered):
-  ``rlm_context_query``, ``rlm_search``, ``rlm_sections``, ``rlm_read``
+  ``snipara_context_query``, ``snipara_search``, ``snipara_sections``,
+  ``snipara_read`` plus legacy ``rlm_*`` aliases.
 * **Tier 2 — Memory** (gated by ``config.memory_enabled``):
-  ``rlm_remember``, ``rlm_recall``, ``rlm_memories``, ``rlm_forget``
+  ``snipara_remember``, ``snipara_recall``, ``snipara_memories``,
+  ``snipara_forget`` plus legacy ``rlm_*`` aliases.
 * **Tier 3 — Advanced** (always registered):
-  ``rlm_shared_context``
+  ``snipara_shared_context`` plus legacy ``rlm_shared_context``.
 
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~
@@ -59,9 +61,9 @@ The following env vars influence behaviour (all optional):
 
 * ``SNIPARA_API_KEY`` — raw API key used when OAuth is unavailable
 * ``SNIPARA_PROJECT_SLUG`` — project slug for URL construction
-* ``RLM_SNIPARA_BASE_URL`` — override the default API base URL
+* ``SNIPARA_BASE_URL`` — override the default API base URL
   (default: ``https://api.snipara.com/mcp``)
-* ``RLM_MEMORY_ENABLED`` — set to ``true`` to register Tier 2 memory
+* ``SNIPARA_MEMORY_ENABLED`` — set to ``true`` to register Tier 2 memory
   tools
 
 Example
@@ -120,7 +122,7 @@ class SniparaClient:
 
         client = SniparaClient.from_config(config)  # None if no auth
         if client:
-            result = await client.call_tool("rlm_context_query", {"query": "..."})
+            result = await client.call_tool("snipara_context_query", {"query": "..."})
 
     For testing or advanced use, you can instantiate directly:
 
@@ -135,7 +137,7 @@ class SniparaClient:
     Args:
         base_url: Snipara API base URL.  Trailing slashes are stripped.
             Default: ``https://api.snipara.com/mcp``.  Override via
-            ``RLM_SNIPARA_BASE_URL`` env var or ``snipara_base_url`` in
+            ``SNIPARA_BASE_URL`` env var or ``snipara_base_url`` in
             ``rlm.toml``.
         project_slug: Snipara project slug used to construct the full
             endpoint URL (``{base_url}/{project_slug}``).
@@ -169,8 +171,9 @@ class SniparaClient:
 
         1. ``get_snipara_auth()`` — checks OAuth tokens at
            ``~/.snipara/tokens.json``, then ``SNIPARA_API_KEY`` env var.
-        2. ``config.snipara_api_key`` — static key from ``rlm.toml``
-           or ``RLM_SNIPARA_API_KEY`` env var (via pydantic-settings).
+        2. ``config.snipara_api_key`` — static key from
+           ``snipara-sandbox.toml`` / legacy ``rlm.toml`` or
+           ``SNIPARA_API_KEY`` env var (via pydantic-settings).
         3. ``config.snipara_project_slug`` — project slug from config
            or ``SNIPARA_PROJECT_SLUG`` env var.
 
@@ -289,7 +292,7 @@ class SniparaClient:
                 "id": 1,
                 "method": "tools/call",
                 "params": {
-                    "name": "rlm_context_query",
+                    "name": "snipara_context_query",
                     "arguments": {"query": "...", "max_tokens": 4000}
                 }
             }
@@ -299,7 +302,7 @@ class SniparaClient:
         matches the MCP server's behaviour.
 
         Args:
-            tool_name: Snipara tool name (e.g., ``"rlm_context_query"``).
+            tool_name: Snipara tool name (e.g., ``"snipara_context_query"``).
             arguments: Keyword arguments for the tool.  ``None`` values
                 are automatically removed.
 
@@ -398,6 +401,7 @@ class SniparaClient:
 def get_native_snipara_tools(
     client: SniparaClient,
     memory_enabled: bool = False,
+    include_legacy_aliases: bool = True,
 ) -> list[Tool]:
     """Create all native Snipara tools bound to a ``SniparaClient``.
 
@@ -410,10 +414,10 @@ def get_native_snipara_tools(
     +-----------------------+-------------------------------------------+
     | Tool                  | Purpose                                   |
     +=======================+===========================================+
-    | ``rlm_context_query`` | Semantic/keyword/hybrid doc search        |
-    | ``rlm_search``        | Regex pattern search across documentation |
-    | ``rlm_sections``      | List indexed sections with pagination     |
-    | ``rlm_read``          | Read specific lines from documentation    |
+    | ``snipara_context_query`` | Semantic/keyword/hybrid doc search    |
+    | ``snipara_search``        | Regex pattern search across docs       |
+    | ``snipara_sections``      | List indexed sections with pagination  |
+    | ``snipara_read``          | Read specific lines from documentation |
     +-----------------------+-------------------------------------------+
 
     **Tier 2 — Memory** (gated by ``memory_enabled``, 4 tools):
@@ -421,10 +425,10 @@ def get_native_snipara_tools(
     +--------------------+---------------------------------------------+
     | Tool               | Purpose                                     |
     +====================+=============================================+
-    | ``rlm_remember``   | Store a memory (fact/decision/learning/...) |
-    | ``rlm_recall``     | Semantic recall by query                    |
-    | ``rlm_memories``   | List memories with filters                  |
-    | ``rlm_forget``     | Delete memories by ID/type/category/age     |
+    | ``snipara_remember``   | Store a memory                         |
+    | ``snipara_recall``     | Semantic recall by query               |
+    | ``snipara_memories``   | List memories with filters             |
+    | ``snipara_forget``     | Delete memories by filter              |
     +--------------------+---------------------------------------------+
 
     **Tier 3 — Advanced** (always registered, 1 tool):
@@ -432,17 +436,19 @@ def get_native_snipara_tools(
     +------------------------+------------------------------------------+
     | Tool                   | Purpose                                  |
     +========================+==========================================+
-    | ``rlm_shared_context`` | Merged team docs (MANDATORY, GUIDELINES) |
+    | ``snipara_shared_context`` | Merged team docs                     |
     +------------------------+------------------------------------------+
 
     Args:
         client: A configured ``SniparaClient`` instance with valid auth.
         memory_enabled: When ``True``, include Tier 2 memory tools.
             Controlled by ``config.memory_enabled`` (default ``False``).
+        include_legacy_aliases: When ``True``, also register the former
+            ``rlm_*`` tool names for migration compatibility.
 
     Returns:
         List of ``Tool`` instances ready for registration in the
-        ``ToolRegistry``.  5 tools without memory, 9 with memory.
+        ``ToolRegistry``.  Snipara names are returned before legacy aliases.
     """
     # Tier 1 (always) + Tier 3 (always)
     tools: list[Tool] = [
@@ -466,7 +472,22 @@ def get_native_snipara_tools(
             ]
         )
 
-    return tools
+    snipara_tools = [_snipara_alias_tool(tool) for tool in tools]
+    if include_legacy_aliases:
+        return [*snipara_tools, *tools]
+    return snipara_tools
+
+
+def _snipara_alias_tool(tool: Tool) -> Tool:
+    """Return a Snipara-named public alias for a legacy ``rlm_*`` tool."""
+    if not tool.name.startswith("rlm_"):
+        return tool
+    return Tool(
+        name=tool.name.replace("rlm_", "snipara_", 1),
+        description=tool.description.replace("RLM", "Snipara"),
+        parameters=tool.parameters,
+        handler=tool.handler,
+    )
 
 
 # ---------------------------------------------------------------------------

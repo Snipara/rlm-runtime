@@ -1,12 +1,12 @@
 [project]
-name = "rlm-runtime"
-version = "2.1.3"
-description = "Recursive Language Model runtime with sandboxed REPL execution"
+name = "snipara-sandbox"
+version = "2.2.0"
+description = "Snipara Sandbox runtime for stateful, sandboxed AI workflow execution"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [{ name = "Snipara", email = "hello@snipara.com" }]
-keywords = ["llm", "ai", "recursive", "repl", "agents", "mcp"]
+keywords = ["llm", "ai", "agents", "mcp", "sandbox", "snipara", "workflow"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -46,12 +46,22 @@ dev = [
     "streamlit>=1.30.0",
     "plotly>=5.18.0",
 ]
-all = ["rlm-runtime[docker,wasm,snipara,mcp,visualizer,dev]"]
+all = ["snipara-sandbox[docker,wasm,snipara,mcp,visualizer,dev]"]
+
+[project.urls]
+Homepage = "https://snipara.com"
+Repository = "https://github.com/Snipara/snipara-sandbox"
+Issues = "https://github.com/Snipara/snipara-sandbox/issues"
+Documentation = "https://github.com/Snipara/snipara-sandbox#readme"
 
 [project.scripts]
+snipara-sandbox = "rlm.cli.main:app"
 rlm = "rlm.cli.main:app"
 
 [project.entry-points."rlm.tools"]
+builtin = "rlm.tools.builtin:register"
+
+[project.entry-points."snipara_sandbox.tools"]
 builtin = "rlm.tools.builtin:register"
 
 [build-system]
@@ -59,10 +69,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/rlm"]
+packages = ["src/rlm", "src/snipara_sandbox"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["/.github", "/tests"]
+exclude = [
+    "/.github",
+    "/.claude",
+    "/.snipara",
+    "/tests",
+    "/AGENTS.md",
+    "/CLAUDE.md",
+]
 
 [tool.hatch.metadata]
 # Disable license-file auto-detection (causes PyPI upload issues)
@@ -91,7 +108,7 @@ strict = true
 warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
-packages = ["rlm"]
+packages = ["rlm", "snipara_sandbox"]
 mypy_path = "src"
 
 # Ignore missing stubs for external libraries

@@ -1,6 +1,6 @@
 # API Reference
 
-This document provides a comprehensive API reference for RLM Runtime.
+This document provides a comprehensive API reference for Snipara Sandbox.
 
 ## Table of Contents
 
@@ -15,14 +15,14 @@ This document provides a comprehensive API reference for RLM Runtime.
 
 ## Main Classes
 
-### RLM
+### Snipara Sandbox
 
-The main entry point for RLM Runtime.
+The main entry point for Snipara Sandbox.
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
-rlm = RLM(
+sandbox = SniparaSandbox(
     # Required
     model: str = "gpt-4o-mini",          # LLM model identifier
 
@@ -84,7 +84,7 @@ Execute a recursive completion.
 
 **Example:**
 ```python
-result = await rlm.completion("Analyze the CSV file")
+result = await sandbox.completion("Analyze the CSV file")
 print(result.response)
 ```
 
@@ -104,7 +104,7 @@ Stream completion tokens.
 
 **Example:**
 ```python
-async for chunk in rlm.stream("Write a story"):
+async for chunk in sandbox.stream("Write a story"):
     print(chunk, end="", flush=True)
 ```
 
@@ -242,10 +242,10 @@ class TrajectoryEvent:
 
 ## Configuration
 
-### RLMConfig
+### SniparaSandboxConfig
 
 ```python
-class RLMConfig(BaseSettings):
+class SniparaSandboxConfig(BaseSettings):
     # Backend settings
     backend: str = "litellm"
     model: str = "gpt-4o-mini"
@@ -292,13 +292,13 @@ class RLMConfig(BaseSettings):
 ### load_config
 
 ```python
-def load_config(config_path: Path | None = None) -> RLMConfig:
+def load_config(config_path: Path | None = None) -> SniparaSandboxConfig:
 ```
 
 Load configuration from file and environment.
 
 **Parameters:**
-- `config_path` - Optional path to rlm.toml
+- `config_path` - Optional path to snipara-sandbox.toml
 
 **Priority:**
 1. Environment variables
@@ -448,10 +448,10 @@ class ToolRegistry:
 
 ## CLI Commands
 
-### rlm run
+### snipara-sandbox run
 
 ```bash
-rlm run "Your prompt here" [OPTIONS]
+snipara-sandbox run "Your prompt here" [OPTIONS]
 ```
 
 **Options:**
@@ -463,25 +463,25 @@ rlm run "Your prompt here" [OPTIONS]
 
 **Example:**
 ```bash
-rlm run "Analyze data.csv" --env docker --max-depth 6
+snipara-sandbox run "Analyze data.csv" --env docker --max-depth 6
 ```
 
-### rlm init
+### snipara-sandbox init
 
 ```bash
-rlm init [OPTIONS]
+snipara-sandbox init [OPTIONS]
 ```
 
-Initialize RLM configuration.
+Initialize Snipara Sandbox configuration.
 
 **Options:**
 - `--path` - Config file path
 - `--env` - Default environment
 
-### rlm config show
+### snipara-sandbox config show
 
 ```bash
-rlm config show [OPTIONS]
+snipara-sandbox config show [OPTIONS]
 ```
 
 Show the effective runtime configuration.
@@ -490,10 +490,10 @@ Show the effective runtime configuration.
 - `--config, -c` - Config file path
 - `--json` - Output machine-readable JSON
 
-### rlm logs
+### snipara-sandbox logs
 
 ```bash
-rlm logs [TRAJECTORY_ID] [OPTIONS]
+snipara-sandbox logs [TRAJECTORY_ID] [OPTIONS]
 ```
 
 View trajectory logs.
@@ -502,10 +502,10 @@ View trajectory logs.
 - `--dir` - Log directory
 - `--limit` - Number of entries to show
 
-### rlm visualize
+### snipara-sandbox visualize
 
 ```bash
-rlm visualize [OPTIONS]
+snipara-sandbox visualize [OPTIONS]
 ```
 
 Launch trajectory visualizer.
@@ -515,10 +515,10 @@ Launch trajectory visualizer.
 - `--port` - Web server port
 - `--host` - Web server host
 
-### rlm mcp-serve
+### snipara-sandbox mcp-serve
 
 ```bash
-rlm mcp-serve [OPTIONS]
+snipara-sandbox mcp-serve [OPTIONS]
 ```
 
 Start MCP server for Claude Desktop/Code.
@@ -527,18 +527,18 @@ Start MCP server for Claude Desktop/Code.
 - `--port` - Server port
 - `--host` - Server host
 
-### rlm doctor
+### snipara-sandbox doctor
 
 ```bash
-rlm doctor
+snipara-sandbox doctor
 ```
 
 Check system dependencies and configuration.
 
-### rlm version
+### snipara-sandbox version
 
 ```bash
-rlm version
+snipara-sandbox version
 ```
 
 Show version information.
@@ -549,14 +549,14 @@ Show version information.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RLM_BACKEND` | LLM backend | `litellm` |
-| `RLM_MODEL` | Model identifier | `gpt-4o-mini` |
-| `RLM_TEMPERATURE` | Temperature | `0.0` |
-| `RLM_API_KEY` | API key | None |
-| `RLM_ENVIRONMENT` | Execution env | `local` |
-| `RLM_DOCKER_IMAGE` | Docker image | `python:3.11-slim` |
-| `RLM_MAX_DEPTH` | Max depth | `4` |
-| `RLM_TOKEN_BUDGET` | Token budget | `8000` |
-| `RLM_VERBOSE` | Verbose logging | `false` |
+| `SNIPARA_SANDBOX_BACKEND` | LLM backend | `litellm` |
+| `SNIPARA_SANDBOX_MODEL` | Model identifier | `gpt-4o-mini` |
+| `SNIPARA_SANDBOX_TEMPERATURE` | Temperature | `0.0` |
+| `SNIPARA_SANDBOX_LLM_API_KEY` | LLM backend API key | None |
+| `SNIPARA_SANDBOX_ENVIRONMENT` | Execution env | `local` |
+| `SNIPARA_SANDBOX_DOCKER_IMAGE` | Docker image | `python:3.11-slim` |
+| `SNIPARA_SANDBOX_MAX_DEPTH` | Max depth | `4` |
+| `SNIPARA_SANDBOX_TOKEN_BUDGET` | Token budget | `8000` |
+| `SNIPARA_SANDBOX_VERBOSE` | Verbose logging | `false` |
 | `SNIPARA_API_KEY` | Snipara key | None |
 | `SNIPARA_PROJECT_SLUG` | Snipara project | None |

@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Basic RLM Runtime Example
+Basic Snipara Sandbox Example
 
-This example demonstrates the simplest usage of RLM Runtime
+This example demonstrates the simplest usage of Snipara Sandbox
 for recursive language model completion.
 """
 
 import asyncio
 
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 
 async def main():
     """Run a basic completion."""
-    # Create RLM instance with default settings
-    rlm = RLM(
+    # Create Snipara Sandbox instance with default settings
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
         # Other options:
         # environment="local",  # local, docker, or wasm
@@ -24,14 +24,14 @@ async def main():
 
     # Simple completion
     print("=== Basic Completion ===")
-    result = await rlm.completion("What is 2 + 2?")
+    result = await sandbox.completion("What is 2 + 2?")
     print(f"Response: {result.response}")
     print(f"Calls: {result.total_calls}, Tokens: {result.total_tokens}")
     print()
 
     # Completion with system prompt
     print("=== With System Prompt ===")
-    result = await rlm.completion(
+    result = await sandbox.completion(
         prompt="Solve this math problem: 15 * 7",
         system="You are a math tutor. Show your work step by step.",
     )
@@ -41,7 +41,7 @@ async def main():
     # Streaming completion
     print("=== Streaming ===")
     print("Streaming response: ", end="", flush=True)
-    async for chunk in rlm.stream("Write a haiku about code"):
+    async for chunk in sandbox.stream("Write a haiku about code"):
         print(chunk, end="", flush=True)
     print("\n")
 

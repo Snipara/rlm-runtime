@@ -1,7 +1,7 @@
 {
-  "name": "@rlm/runtime",
+  "name": "@snipara/sandbox",
   "version": "2.2.0",
-  "description": "TypeScript SDK for RLM Runtime - Sandboxed Python execution for AI agents",
+  "description": "TypeScript SDK for Snipara Sandbox - Sandboxed Python execution for AI agents",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -27,11 +27,11 @@
     "agent",
     "typescript"
   ],
-  "author": "RLM Runtime Contributors",
+  "author": "Snipara",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/rlm-runtime.git",
+    "url": "https://github.com/Snipara/snipara-sandbox.git",
     "directory": "npm-package"
   },
   "engines": {

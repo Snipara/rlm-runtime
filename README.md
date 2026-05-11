@@ -1,618 +1,366 @@
-# RLM Runtime
+# Snipara Sandbox
 
-**Recursive Language Model runtime with sandboxed REPL execution.**
+## Stateful execution runtime for persistent AI workflows
 
-RLM Runtime enables LLMs to recursively decompose tasks, execute real code in isolated environments, and retrieve context on demand. Instead of simulating computation in tokens, the model executes actual code—cheaper, more reliable, and auditable.
+Modern AI agents can reason, write code, call tools, and solve complex tasks.
 
-## Release Notes
+But most agent workflows are still transient. They lose execution state, restart
+from partial context, repeat failed work, and struggle to resume reliably across
+sessions, tools, users, and model changes.
 
-Current published version: `2.1.3`
+Snipara Sandbox is a state-aware execution runtime for persistent AI workflows. It
+adds a durable execution layer around AI agents so they can execute code safely,
+preserve trajectories, validate intermediate results, and resume long-running
+workflows with continuity.
 
-Highlights in this release:
+```text
+Context
+  -> Planning
+  -> Execution
+  -> Validation
+  -> Persistent State
+  -> Resume Later
+```
 
-- `rlm --version` now works at the root command level.
-- CLI failure states now return non-zero exit codes and preserve the failure reason.
-- Project `.env` files are loaded automatically by the CLI and config loader.
-- `--json` output is now clean JSON without debug logs.
-- `--max-depth 0` is rejected immediately with a clear error.
-- `rlm config show` now exposes the effective runtime configuration.
+Snipara Sandbox is part of the broader Snipara ecosystem. Snipara provides persistent
+project memory and shared context. Snipara Sandbox adds persistent execution,
+resumable workflows, and sandboxed task continuity.
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+## The Problem
+
+Large context windows are useful, but they do not solve execution continuity.
+
+AI systems also need infrastructure for:
+
+- persistent execution state
+- resumable workflows
+- sandboxed code execution
+- validation-aware task loops
+- trajectory persistence
+- recoverable orchestration
+
+Without that layer, even strong agents often rediscover prior results, lose
+intermediate state, and restart work instead of continuing it.
+
+Snipara Sandbox exists to make execution durable.
+
+## Core Concepts
+
+### Persistent execution state
+
+Snipara Sandbox gives workflows a stateful execution environment instead of treating
+every task as a one-shot prompt. Agents can store intermediate results, inspect
+prior execution, and continue from known state.
+
+### Sandboxed execution
+
+Agents can execute Python in controlled environments:
+
+- local RestrictedPython execution for fast trusted development
+- Docker isolation for stronger process and filesystem boundaries
+- optional WebAssembly support for portable sandboxing
+
+### Trajectory persistence
+
+Executions can be logged as structured trajectories. This makes workflows easier
+to inspect, debug, audit, replay, and improve.
+
+### Validation-aware orchestration
+
+Snipara Sandbox is designed for workflows that do not just generate outputs, but also
+check them. Code execution, tool calls, and validation steps become part of the
+same recoverable workflow.
 
 ## Features
 
-- **Recursive Completion** - LLMs can spawn sub-calls, execute code, and aggregate results
-- **Sandboxed REPL** - Local (RestrictedPython) or Docker isolation
-- **Multi-Provider** - OpenAI, Anthropic, and 100+ providers via LiteLLM
-- **Streaming** - Real-time token streaming for simple completions
-- **Trajectory Logging** - Full execution traces in JSONL format
-- **Trajectory Visualizer** - Interactive Streamlit dashboard for debugging
-- **MCP Server** - Claude Desktop/Code integration with multi-project support
-- **Plugin System** - Extend with custom tools
-- **Snipara Integration** - Optional context optimization (recommended)
+- Persistent workflow state
+- Sandboxed Python execution
+- Docker isolation with resource limits
+- Resumable task orchestration
+- Trajectory logging
+- Validation-aware execution loops
+- Multi-step execution continuity
+- MCP-compatible runtime tools
+- Optional Snipara context and memory integration
+- LiteLLM backend support for OpenAI, Anthropic, and 100+ providers
+
+## Relationship With Snipara
+
+Snipara Sandbox is designed to work naturally with Snipara.
+
+```text
+LLM / Agent
+  -> Snipara Context and Memory
+  -> Snipara Sandbox
+  -> Sandboxed Execution
+```
+
+In this architecture:
+
+- Snipara provides persistent shared context, project memory, and retrieval.
+- Snipara Sandbox provides persistent execution continuity and sandboxed runtime state.
+- The LLM handles reasoning, generation, and tool selection.
+
+The runtime is optional. Snipara can function independently as a shared memory
+and context layer for AI systems.
+
+Snipara Sandbox extends the stack when a workflow needs:
+
+- long-running task execution
+- state continuity across sessions
+- validation through real code
+- auditable execution traces
+- recoverable orchestration
+
+In short: Snipara keeps the context alive. Snipara Sandbox keeps the execution alive.
 
 ## Installation
 
 ```bash
 # Basic install
-pip install rlm-runtime
+pip install snipara-sandbox
 
-# With Docker support (recommended)
-pip install rlm-runtime[docker]
+# With Docker sandbox support
+pip install snipara-sandbox[docker]
 
-# With MCP server (for Claude Desktop/Code)
-pip install rlm-runtime[mcp]
+# With MCP server support
+pip install snipara-sandbox[mcp]
 
-# With Snipara context optimization
-pip install rlm-runtime[snipara]
+# With Snipara integration
+pip install snipara-sandbox[snipara]
 
 # Full install
-pip install rlm-runtime[all]
+pip install snipara-sandbox[all]
 ```
 
-## Claude Desktop / Claude Code Integration
+Package version in this repo: `2.2.0`
 
-RLM Runtime includes an MCP server that provides **sandboxed Python execution** to Claude. **Zero API keys required** - designed to work within Claude Code's billing.
-
-### Architecture
-
-```
-Claude Code (LLM + billing included)
-    │
-    ├── rlm-runtime-mcp (code sandbox - no API keys)
-    │   ├── execute_python
-    │   ├── get/set/clear_repl_context
-    │   └── list_sessions / destroy_session
-    │
-    ├── Native Snipara tools (OAuth or API key)
-    │   ├── rlm_context_query, rlm_search, rlm_sections, rlm_read
-    │   ├── rlm_shared_context
-    │   └── rlm_remember/recall/memories/forget (if memory_enabled)
-    │
-    └── snipara-mcp (optional fallback, OAuth auth)
-```
-
-### Setup
-
-1. Install with MCP support:
-   ```bash
-   pip install rlm-runtime[mcp]
-   ```
-
-2. Add to your Claude configuration:
-
-   **Claude Desktop** (`~/.claude/claude_desktop_config.json`):
-   ```json
-   {
-     "mcpServers": {
-       "rlm": {
-         "command": "rlm",
-         "args": ["mcp-serve"]
-       }
-     }
-   }
-   ```
-
-   **Claude Code** (via MCP settings):
-   ```json
-   {
-     "mcpServers": {
-       "rlm": {
-         "command": "rlm",
-         "args": ["mcp-serve"]
-       }
-     }
-   }
-   ```
-
-3. Restart Claude Desktop or reload Claude Code.
-
-### Available MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `execute_python` | Run Python code in a sandboxed environment |
-| `get_repl_context` | Get current REPL context variables |
-| `set_repl_context` | Set a variable in REPL context |
-| `clear_repl_context` | Clear all REPL context |
-
-### With Snipara (Optional)
-
-Snipara tools are registered automatically when credentials are available.
-The native HTTP client is preferred; `snipara-mcp` is a fallback.
-
-**Option A: OAuth (recommended)**
-
-```bash
-snipara-mcp-login      # Opens browser for authentication
-snipara-mcp-status     # Check auth status
-```
-
-**Option B: API key**
-
-```bash
-export SNIPARA_API_KEY=rlm_your_key_here
-export SNIPARA_PROJECT_SLUG=your-project
-```
-
-**Option C: Separate snipara-mcp server (legacy)**
-
-```json
-{
-  "mcpServers": {
-    "rlm": {
-      "command": "rlm",
-      "args": ["mcp-serve"]
-    },
-    "snipara": {
-      "command": "snipara-mcp-server"
-    }
-  }
-}
-```
-
-See [MCP Integration Guide](docs/mcp-integration.md) for details.
-
-### Example Usage in Claude
-
-Once configured, Claude can execute Python in a secure sandbox:
-
-```
-User: Calculate the fibonacci sequence up to n=20
-
-Claude: I'll use the execute_python tool to calculate this.
-
-[execute_python]
-def fib(n):
-    a, b = 0, 1
-    result = []
-    while a <= n:
-        result.append(a)
-        a, b = b, a + b
-    return result
-
-result = fib(20)
-print(result)
-
-Output: [0, 1, 1, 2, 3, 5, 8, 13]
-```
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Quick Start
 
 ### CLI
 
 ```bash
-# Initialize config
-rlm init
+snipara-sandbox init
 
-# Run a completion
-rlm run "Count the lines in data.csv and show the top 5 rows"
+snipara-sandbox run "Analyze this dataset and validate the result with Python"
 
-# Run with Docker isolation
-rlm run --env docker "Parse the JSON files and extract all emails"
+snipara-sandbox run --env docker "Process this untrusted input in an isolated runtime"
 
-# Verbose mode (shows trajectory)
-rlm run -v "Explain the authentication flow in this codebase"
+snipara-sandbox logs
 ```
+
+Inspect the effective configuration:
+
+```bash
+snipara-sandbox config show
+snipara-sandbox config show --json
+```
+
+The legacy `rlm` command remains available for existing users.
 
 ### Python API
 
 ```python
 import asyncio
-from rlm import RLM
+
+from snipara_sandbox import SniparaSandbox
+
 
 async def main():
-    # Basic usage
-    rlm = RLM(model="gpt-4o-mini", environment="local")
+    runtime = SniparaSandbox(
+        model="gpt-4o-mini",
+        environment="docker",
+        max_depth=4,
+        token_budget=8000,
+    )
 
-    result = await rlm.completion("Analyze data.csv and find outliers")
+    result = await runtime.completion(
+        "Find the data quality issues in ./data and validate the findings."
+    )
+
     print(result.response)
-    print(f"Calls: {result.total_calls}, Tokens: {result.total_tokens}")
+    print(result.trajectory_id)
+
 
 asyncio.run(main())
 ```
 
-### With Snipara Context Optimization
+## MCP Runtime Tools
+
+Snipara Sandbox includes an MCP server that gives AI coding agents a sandboxed Python
+runtime without requiring separate LLM API keys for the runtime itself.
+
+```bash
+pip install snipara-sandbox[mcp]
+snipara-sandbox mcp-serve
+```
+
+Example MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "snipara-sandbox": {
+      "command": "snipara-sandbox",
+      "args": ["mcp-serve"]
+    }
+  }
+}
+```
+
+Core MCP tools:
+
+| Tool | Purpose |
+|------|---------|
+| `execute_python` | Execute Python in a sandboxed session |
+| `get_repl_context` | Read persistent session variables |
+| `set_repl_context` | Store persistent session variables |
+| `clear_repl_context` | Reset session state |
+| `list_sessions` | Inspect active runtime sessions |
+| `destroy_session` | Destroy a runtime session |
+| `snipara_agent_run` | Start an autonomous agent task |
+| `snipara_agent_status` | Check an agent run |
+| `snipara_agent_cancel` | Cancel an agent run |
+
+## Using Snipara Sandbox With Snipara
+
+Snipara credentials are detected automatically when available. The native HTTP
+client is preferred, with `snipara-mcp` kept as a compatibility fallback.
+
+OAuth:
+
+```bash
+snipara-mcp-login
+snipara-mcp-status
+```
+
+API key:
+
+```bash
+export SNIPARA_API_KEY=snp-...
+export SNIPARA_PROJECT_SLUG=my-project
+```
+
+Python:
 
 ```python
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
-rlm = RLM(
+runtime = SniparaSandbox(
     model="gpt-4o-mini",
     environment="docker",
-    snipara_api_key="rlm_...",
+    snipara_api_key="snp-...",
     snipara_project_slug="my-project",
 )
 
-# Snipara tools auto-registered: rlm_context_query, rlm_search,
-# rlm_sections, rlm_read, rlm_shared_context (+ memory tools if enabled)
-result = await rlm.completion("Explain how authentication works in this project")
+result = await runtime.completion(
+    "Use project context to explain the authentication flow and validate examples."
+)
 ```
+
+When configured, Snipara tools provide semantic context retrieval, shared project
+context, and optional durable memory. Snipara Sandbox uses that context during
+execution while preserving the workflow trajectory.
 
 ## Configuration
 
-Create `rlm.toml` in your project:
+Create `snipara-sandbox.toml` in your project:
 
 ```toml
-[rlm]
+[snipara_sandbox]
 backend = "litellm"
 model = "gpt-4o-mini"
-environment = "docker"  # "local" or "docker"
+environment = "docker"
 max_depth = 4
 max_subcalls = 12
 token_budget = 8000
 verbose = false
 
-# Docker settings
 docker_image = "python:3.11-slim"
 docker_cpus = 1.0
 docker_memory = "512m"
 
-# Snipara (optional but recommended)
-snipara_api_key = "rlm_..."
 snipara_project_slug = "your-project"
 ```
 
-Or use environment variables:
+Environment variables are also supported:
 
 ```bash
-export RLM_MODEL=gpt-4o-mini
-export RLM_ENVIRONMENT=docker
-export SNIPARA_API_KEY=rlm_...
+export SNIPARA_SANDBOX_MODEL=gpt-4o-mini
+export SNIPARA_SANDBOX_ENVIRONMENT=docker
 export SNIPARA_PROJECT_SLUG=my-project
 ```
 
-Inspect the effective configuration at any time:
+## Runtime Environments
+
+| Environment | Use case | Isolation |
+|-------------|----------|-----------|
+| `local` | Fast trusted development | RestrictedPython in process |
+| `docker` | Production and untrusted inputs | Container isolation |
+| `wasm` | Portable sandboxing | WebAssembly runtime |
+
+Docker mode is recommended for production and untrusted execution.
 
 ```bash
-rlm config show
-rlm config show --json
-```
-
-## Environments
-
-### Local REPL
-
-- Fastest iteration
-- Uses RestrictedPython for sandboxing
-- Limited isolation (no network/filesystem by default)
-- Best for trusted inputs in development
-
-### Docker REPL
-
-- Strong isolation in containers
-- Configurable resource limits (CPU, memory)
-- Network disabled by default
-- **Recommended for production and untrusted inputs**
-
-```bash
-# Start with Docker
-rlm run --env docker "Process untrusted user input..."
-```
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  RLM Orchestrator                                               │
-│  • Manages recursion depth and token budgets                    │
-│  • Coordinates LLM calls and tool execution                     │
-├─────────────────────────────────────────────────────────────────┤
-│  LLM Backends              │  REPL Environments                 │
-│  • LiteLLM (default)       │  • Local (RestrictedPython)        │
-│  • OpenAI                  │  • Docker (isolated)               │
-│  • Anthropic               │                                    │
-├─────────────────────────────────────────────────────────────────┤
-│  Tool Registry                                                  │
-│  • Builtin: file_read, execute_code, list_files                │
-│  • Snipara: rlm_context_query, rlm_search, rlm_sections, etc. │
-│  • Custom: your own tools                                       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Custom Tools
-
-```python
-from rlm import RLM
-from rlm.tools import Tool
-
-async def fetch_weather(city: str) -> dict:
-    # Your implementation
-    return {"city": city, "temp": 72}
-
-weather_tool = Tool(
-    name="get_weather",
-    description="Get current weather for a city",
-    parameters={
-        "type": "object",
-        "properties": {
-            "city": {"type": "string", "description": "City name"}
-        },
-        "required": ["city"]
-    },
-    handler=fetch_weather,
-)
-
-rlm = RLM(tools=[weather_tool])
+snipara-sandbox run --env docker "Validate this user-submitted transformation"
 ```
 
 ## Trajectory Logging
 
-All completions emit JSONL trajectory logs:
+Snipara Sandbox records execution trajectories as structured JSONL logs.
 
 ```bash
-# View recent logs
-rlm logs
-
-# View specific trajectory
-rlm logs abc123-def456
-
-# Logs location
-ls ./logs/
+snipara-sandbox logs
+snipara-sandbox logs <trajectory-id>
 ```
 
-Each event includes:
-- `trajectory_id` - Unique ID for the request
-- `call_id` - ID for this specific call
-- `parent_call_id` - Parent call (for recursion)
-- `depth` - Recursion depth
-- `prompt`, `response` - Input/output
-- `tool_calls`, `tool_results` - Tool usage
-- `token_usage`, `duration_ms` - Metrics
+Trajectory events include:
 
-## Trajectory Visualizer
+- prompts and responses
+- tool calls and tool results
+- parent and child call relationships
+- token usage
+- duration and execution metadata
 
-Debug and analyze execution trajectories with the interactive web UI:
+For visual inspection:
 
 ```bash
-# Install visualizer dependencies
-pip install rlm-runtime[visualizer]
-
-# Launch the dashboard
-rlm visualize
-
-# Custom log directory and port
-rlm visualize --dir ./logs --port 8502
+pip install snipara-sandbox[visualizer]
+snipara-sandbox visualize
 ```
-
-The visualizer provides:
-- **Execution Tree** - Visual graph of recursive calls
-- **Token Charts** - Input/output token usage per call
-- **Duration Analysis** - Timing breakdown across calls
-- **Tool Distribution** - Pie chart of tool call frequency
-- **Event Inspector** - Detailed view of each call with prompts/responses
-
-## API Reference
-
-### RLM Class
-
-```python
-from rlm import RLM
-
-rlm = RLM(
-    # Required
-    model="gpt-4o-mini",           # LLM model identifier
-
-    # Backend
-    backend="litellm",             # "litellm", "openai", or "anthropic"
-    api_key=None,                  # Provider API key (or use env vars)
-
-    # Execution Environment
-    environment="local",           # "local" or "docker"
-
-    # Recursion Limits
-    max_depth=4,                   # Max recursive depth
-    max_subcalls=12,               # Max total tool calls
-    token_budget=8000,             # Token limit per completion
-
-    # Docker Settings (when environment="docker")
-    docker_image="python:3.11-slim",
-    docker_cpus=1.0,
-    docker_memory="512m",
-    docker_network_disabled=True,
-
-    # Tools
-    tools=None,                    # List of custom Tool objects
-
-    # Snipara Integration (native tools or snipara-mcp fallback)
-    snipara_api_key=None,          # Snipara API key (or use SNIPARA_API_KEY env var)
-    snipara_project_slug=None,     # Project slug (or use SNIPARA_PROJECT_SLUG env var)
-    snipara_base_url=None,         # Custom API URL (default: https://api.snipara.com/mcp)
-    memory_enabled=False,          # Enable Tier 2 memory tools
-
-    # Logging
-    verbose=False,                 # Print execution details
-    log_dir="./logs",              # Trajectory log directory
-)
-```
-
-### CompletionResult
-
-```python
-result = await rlm.completion("Your prompt")
-
-result.response          # Final LLM response text
-result.trajectory_id     # Unique ID for this execution
-result.total_calls       # Total LLM calls made
-result.total_tokens      # Total tokens used
-result.depth_reached     # Max recursion depth reached
-result.tool_calls        # List of tool calls made
-result.duration_ms       # Total execution time
-```
-
-### Tool Class
-
-```python
-from rlm.backends.base import Tool
-
-tool = Tool(
-    name="tool_name",              # Unique tool identifier
-    description="What the tool does",
-    parameters={                   # JSON Schema for parameters
-        "type": "object",
-        "properties": {
-            "param1": {"type": "string", "description": "..."},
-        },
-        "required": ["param1"]
-    },
-    handler=async_function,        # Async function to execute
-)
-```
-
-### Error Handling
-
-```python
-from rlm import RLM
-from rlm.core.exceptions import (
-    RLMError,              # Base exception
-    MaxDepthExceeded,      # Recursion limit hit
-    TokenBudgetExhausted,  # Token limit hit
-    REPLExecutionError,    # Code execution failed
-    ToolNotFoundError,     # Unknown tool called
-)
-
-try:
-    result = await rlm.completion("Complex task...")
-except MaxDepthExceeded as e:
-    print(f"Hit max depth at {e.depth}")
-except TokenBudgetExhausted as e:
-    print(f"Used {e.tokens_used} tokens, budget was {e.budget}")
-except REPLExecutionError as e:
-    print(f"Code failed: {e.stderr}")
-```
-
-## Advanced Examples
-
-### Recursive Data Analysis
-
-```python
-from rlm import RLM
-
-rlm = RLM(
-    model="claude-sonnet-4-20250514",
-    environment="docker",
-    max_depth=6,
-)
-
-# The LLM will recursively:
-# 1. List CSV files
-# 2. Read and analyze each one
-# 3. Aggregate findings
-# 4. Generate report
-result = await rlm.completion("""
-    Analyze all CSV files in ./data/:
-    1. Find common columns across files
-    2. Calculate summary statistics for numeric columns
-    3. Identify any data quality issues
-    4. Generate a markdown report
-""")
-```
-
-### Code Generation with Context
-
-```python
-from rlm import RLM
-
-rlm = RLM(
-    model="gpt-4o",
-    snipara_api_key="rlm_...",
-    snipara_project_slug="my-app",
-)
-
-# The LLM will:
-# 1. Query Snipara for auth patterns
-# 2. Execute code to explore existing structure
-# 3. Generate new code following conventions
-result = await rlm.completion("""
-    Add a password reset endpoint:
-    - Follow our existing auth patterns
-    - Use the same error handling conventions
-    - Add tests following our test patterns
-""")
-
-# Access the code that was written
-print(result.response)
-```
-
-### Streaming Output
-
-```python
-from rlm import RLM
-
-rlm = RLM(model="gpt-4o-mini")
-
-async for chunk in rlm.stream("Explain quantum computing"):
-    print(chunk, end="", flush=True)
-```
-
-### Batch Processing
-
-```python
-from rlm import RLM
-import asyncio
-
-rlm = RLM(model="gpt-4o-mini", environment="docker")
-
-prompts = [
-    "Analyze report_q1.csv",
-    "Analyze report_q2.csv",
-    "Analyze report_q3.csv",
-]
-
-# Run in parallel
-results = await asyncio.gather(*[
-    rlm.completion(p) for p in prompts
-])
-```
-
-## Why Snipara?
-
-Without Snipara, RLM can only read files directly. With Snipara:
-
-| Feature | Without Snipara | With Snipara |
-|---------|-----------------|--------------|
-| File reading | Basic read | Semantic search |
-| Token usage | All content (500K) | Relevant only (5K) |
-| Search | Regex only | Hybrid (keyword + embeddings) |
-| Best practices | None | Shared team context |
-| Summaries | None | Cached summaries |
-
-Get your API key at [snipara.com/dashboard](https://snipara.com/dashboard)
 
 ## Development
 
 ```bash
-# Clone
-git clone https://github.com/alopez3006/rlm-runtime
-cd rlm-runtime
+git clone https://github.com/Snipara/snipara-sandbox
+cd snipara-sandbox
 
-# Install dev dependencies
 pip install -e ".[dev]"
 
-# Run tests
 pytest
-
-# Lint
 ruff check src/
 mypy src/
-
-# Build
 python -m build
 ```
 
-## License
-
-Apache 2.0 - See [LICENSE](LICENSE)
-
 ## Documentation
 
-- [Quickstart Guide](docs/quickstart.md) - Get started in 5 minutes
-- [Architecture Guide](docs/architecture.md) - System design and components
-- [MCP Integration](docs/mcp-integration.md) - Claude Desktop/Code setup
-- [Configuration](docs/configuration.md) - All configuration options
-- [Tool Development](docs/tools.md) - Building custom tools
+- [Quickstart Guide](docs/quickstart.md)
+- [Architecture Guide](docs/architecture.md)
+- [MCP Integration](docs/mcp-integration.md)
+- [Configuration](docs/configuration.md)
+- [Tool Development](docs/tools.md)
+- [Snipara Integration](docs/snipara.md)
 
-## Links
+## Repositories
 
-- [Snipara](https://snipara.com) - Context optimization service
-- [GitHub Issues](https://github.com/alopez3006/rlm-runtime/issues)
+- [Snipara Server](https://github.com/Snipara/snipara-server)
+- [Snipara MCP](https://github.com/alopez3006/snipara-mcp)
+- [Snipara Memory](https://github.com/Snipara/snipara-memory)
+- [Snipara Sandbox](https://github.com/Snipara/snipara-sandbox)
+
+## License
+
+Apache 2.0. See [LICENSE](LICENSE).

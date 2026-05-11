@@ -1,4 +1,4 @@
-# RLM Runtime Audit - 2026-04-29
+# Snipara Sandbox Audit - 2026-04-29
 
 This note records the confirmed issues from the runtime investigation, the fixes that were applied in this workspace, and the remaining gaps that were observed but not changed.
 
@@ -8,11 +8,11 @@ This note records the confirmed issues from the runtime investigation, the fixes
 | --- | --- | --- |
 | `rlm --version` failed, while `rlm version` worked | Root Typer command lacked a version callback | Fixed |
 | CLI/package version mismatch | Source reported `2.1.2`, installed package reported `2.0.0` | Documented in version output |
-| `.env` was not loaded by `rlm doctor` / `rlm run` | `OPENAI_API_KEY` was visible only after `source .env` | Fixed |
+| `.env` was not loaded by `snipara-sandbox doctor` / `snipara-sandbox run` | `OPENAI_API_KEY` was visible only after `source .env` | Fixed |
 | Errors returned exit code `0` and `success: true` | Missing OpenAI key and recursion errors were treated as success | Fixed |
 | `--json` was not clean JSON | Debug logs were emitted before the payload | Fixed |
 | `--max-depth 0` was accepted | It failed immediately instead of being rejected up front | Fixed |
-| `rlm config show` was implied by the docs but missing in the CLI | `rlm config --help` had no `show` subcommand | Fixed |
+| `snipara-sandbox config show` was implied by the docs but missing in the CLI | `snipara-sandbox config --help` had no `show` subcommand | Fixed |
 | `--max-depth 1` was too shallow for trivial prompts | Smoke tests only became reliable at `--max-depth 3` with the environment loaded | Still a behavior limit |
 | Repo MCP config did not include the runtime target | `.mcp.json` only exposed Snipara | Still open |
 
@@ -56,8 +56,8 @@ This note records the confirmed issues from the runtime investigation, the fixes
 - `python3 -m pytest tests/unit/test_config.py tests/unit/test_types.py tests/unit/test_cli.py -q`
 - `python3 -m pytest tests/unit/test_orchestrator.py tests/unit/test_sub_llm.py -q`
 - `python3 -m ruff check src/rlm/core/config.py src/rlm/core/types.py src/rlm/core/orchestrator.py src/rlm/cli/main.py tests/unit/test_config.py tests/unit/test_types.py tests/unit/test_cli.py`
-- `rlm config --help`
-- `rlm config show --help`
+- `snipara-sandbox config --help`
+- `snipara-sandbox config show --help`
 
 ## Remaining Notes
 

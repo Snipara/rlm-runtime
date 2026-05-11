@@ -2748,97 +2748,6 @@ wheels = [
 ]
 
 [[package]]
-name = "rlm-runtime"
-version = "2.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "anyio" },
-    { name = "httpx" },
-    { name = "litellm" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "restrictedpython" },
-    { name = "rich" },
-    { name = "structlog" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "docker" },
-    { name = "mcp" },
-    { name = "mypy" },
-    { name = "plotly" },
-    { name = "pyodide-py", version = "0.25.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "pyodide-py", version = "0.27.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
-    { name = "pyodide-py", version = "0.29.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "snipara-mcp" },
-    { name = "streamlit" },
-]
-dev = [
-    { name = "docker" },
-    { name = "mcp" },
-    { name = "mypy" },
-    { name = "plotly" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "streamlit" },
-]
-docker = [
-    { name = "docker" },
-]
-mcp = [
-    { name = "mcp" },
-]
-snipara = [
-    { name = "snipara-mcp" },
-]
-visualizer = [
-    { name = "plotly" },
-    { name = "streamlit" },
-]
-wasm = [
-    { name = "pyodide-py", version = "0.25.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "pyodide-py", version = "0.27.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
-    { name = "pyodide-py", version = "0.29.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "anyio", specifier = ">=4.2.0" },
-    { name = "docker", marker = "extra == 'dev'", specifier = ">=7.0.0" },
-    { name = "docker", marker = "extra == 'docker'", specifier = ">=7.0.0" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "litellm", specifier = ">=1.50.0" },
-    { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
-    { name = "plotly", marker = "extra == 'dev'", specifier = ">=5.18.0" },
-    { name = "plotly", marker = "extra == 'visualizer'", specifier = ">=5.18.0" },
-    { name = "pydantic", specifier = ">=2.5.0" },
-    { name = "pydantic-settings", specifier = ">=2.1.0" },
-    { name = "pyodide-py", marker = "extra == 'wasm'", specifier = ">=0.24.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
-    { name = "restrictedpython", specifier = ">=7.1" },
-    { name = "rich", specifier = ">=13.7.0" },
-    { name = "rlm-runtime", extras = ["docker", "wasm", "snipara", "mcp", "visualizer", "dev"], marker = "extra == 'all'" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.2.0" },
-    { name = "snipara-mcp", marker = "extra == 'snipara'", specifier = ">=1.3.0" },
-    { name = "streamlit", marker = "extra == 'dev'", specifier = ">=1.30.0" },
-    { name = "streamlit", marker = "extra == 'visualizer'", specifier = ">=1.30.0" },
-    { name = "structlog", specifier = ">=24.1.0" },
-    { name = "typer", specifier = ">=0.12.0" },
-]
-
-[[package]]
 name = "rpds-py"
 version = "0.30.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3033,6 +2942,97 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0b/80/b1de0779170370ca2815b0e027ec35603f2b772799c6b5cf60c5da7f966e/snipara_mcp-1.5.0.tar.gz", hash = "sha256:a32ad80ecf89c5b4fa5e80df70c70aa817e611184ae873b0edf57c6b271faa34", size = 19358 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/15/395b5413ef25411d92e4b2bb2f77e799da61238dc8ad4c31496cb7cbf70b/snipara_mcp-1.5.0-py3-none-any.whl", hash = "sha256:67d2dc4ecc3f5ab60acbb4b46ba4aa6227f424bacbabe2a3e680469f3a856ef2", size = 22035 },
+]
+
+[[package]]
+name = "snipara-sandbox"
+version = "2.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpx" },
+    { name = "litellm" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "restrictedpython" },
+    { name = "rich" },
+    { name = "structlog" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "docker" },
+    { name = "mcp" },
+    { name = "mypy" },
+    { name = "plotly" },
+    { name = "pyodide-py", version = "0.25.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "pyodide-py", version = "0.27.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
+    { name = "pyodide-py", version = "0.29.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "snipara-mcp" },
+    { name = "streamlit" },
+]
+dev = [
+    { name = "docker" },
+    { name = "mcp" },
+    { name = "mypy" },
+    { name = "plotly" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "streamlit" },
+]
+docker = [
+    { name = "docker" },
+]
+mcp = [
+    { name = "mcp" },
+]
+snipara = [
+    { name = "snipara-mcp" },
+]
+visualizer = [
+    { name = "plotly" },
+    { name = "streamlit" },
+]
+wasm = [
+    { name = "pyodide-py", version = "0.25.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "pyodide-py", version = "0.27.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
+    { name = "pyodide-py", version = "0.29.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anyio", specifier = ">=4.2.0" },
+    { name = "docker", marker = "extra == 'dev'", specifier = ">=7.0.0" },
+    { name = "docker", marker = "extra == 'docker'", specifier = ">=7.0.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "litellm", specifier = ">=1.50.0" },
+    { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
+    { name = "plotly", marker = "extra == 'dev'", specifier = ">=5.18.0" },
+    { name = "plotly", marker = "extra == 'visualizer'", specifier = ">=5.18.0" },
+    { name = "pydantic", specifier = ">=2.5.0" },
+    { name = "pydantic-settings", specifier = ">=2.1.0" },
+    { name = "pyodide-py", marker = "extra == 'wasm'", specifier = ">=0.24.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
+    { name = "restrictedpython", specifier = ">=7.1" },
+    { name = "rich", specifier = ">=13.7.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.2.0" },
+    { name = "snipara-mcp", marker = "extra == 'snipara'", specifier = ">=1.3.0" },
+    { name = "snipara-sandbox", extras = ["docker", "wasm", "snipara", "mcp", "visualizer", "dev"], marker = "extra == 'all'" },
+    { name = "streamlit", marker = "extra == 'dev'", specifier = ">=1.30.0" },
+    { name = "streamlit", marker = "extra == 'visualizer'", specifier = ">=1.30.0" },
+    { name = "structlog", specifier = ">=24.1.0" },
+    { name = "typer", specifier = ">=0.12.0" },
 ]
 
 [[package]]

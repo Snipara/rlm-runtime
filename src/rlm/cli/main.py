@@ -1,4 +1,4 @@
-"""RLM CLI entrypoint."""
+"""Snipara Sandbox CLI entrypoint."""
 
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ if TYPE_CHECKING:
     from rlm.core.config import RLMConfig
 
 app = typer.Typer(
-    name="rlm",
-    help="Recursive Language Model runtime - execute LLM completions with tool use and sandboxed code execution.",
+    name="snipara-sandbox",
+    help="Snipara Sandbox runtime - execute AI workflows with tool use and sandboxed code execution.",
     add_completion=True,
     no_args_is_help=True,
 )
@@ -47,14 +47,29 @@ def _version_string() -> str:
     """Return a human-readable version string with install mismatch details."""
     installed_version: str | None = None
     try:
-        installed_version = get_distribution_version("rlm-runtime")
+        installed_version = get_distribution_version("snipara-sandbox")
     except PackageNotFoundError:
         installed_version = None
 
-    version_text = f"rlm-runtime {__version__}"
+    version_text = f"snipara-sandbox {__version__}"
     if installed_version and installed_version != __version__:
         version_text += f" (installed: {installed_version})"
+    try:
+        legacy_version = get_distribution_version("rlm-runtime")
+    except PackageNotFoundError:
+        legacy_version = None
+    if legacy_version and legacy_version != installed_version:
+        version_text += f" (legacy rlm-runtime: {legacy_version})"
     return version_text
+
+
+def _default_config_path() -> Path:
+    """Resolve the default config path, preserving legacy rlm.toml support."""
+    snipara_path = Path("snipara-sandbox.toml")
+    legacy_path = Path("rlm.toml")
+    if not snipara_path.exists() and legacy_path.exists():
+        return legacy_path
+    return snipara_path
 
 
 def _config_show_payload(config: RLMConfig, config_file: Path) -> dict[str, object]:
@@ -181,7 +196,9 @@ def _config_show_rows(payload: dict[str, object]) -> list[tuple[str, str, str]]:
         (
             "Snipara",
             "Project slug",
-            str(payload.get("snipara_project_slug")) if payload.get("snipara_project_slug") else "not set",
+            str(payload.get("snipara_project_slug"))
+            if payload.get("snipara_project_slug")
+            else "not set",
         ),
         ("Snipara", "Base URL", str(payload.get("snipara_base_url", ""))),
         (
@@ -218,8 +235,10 @@ def is_claude_code_context() -> bool:
     if "claude" in term_program:
         return True
 
-    # Check for RLM_CLAUDE_CODE_MODE (explicit opt-in)
-    return bool(os.environ.get("RLM_CLAUDE_CODE_MODE"))
+    # Explicit opt-in, with the legacy variable kept as a compatibility alias.
+    return bool(
+        os.environ.get("SNIPARA_SANDBOX_CLAUDE_CODE_MODE") or os.environ.get("RLM_CLAUDE_CODE_MODE")
+    )
 
 
 @app.callback(invoke_without_command=True)
@@ -252,8 +271,8 @@ def config_show(
     """Show the effective runtime configuration."""
     from rlm.core.config import load_config
 
-    config_path = config_file or Path("rlm.toml")
-    config = load_config(config_file)
+    config_path = config_file or _default_config_path()
+    config = load_config(config_path)
     payload = _config_show_payload(config, config_path)
 
     if json_output:
@@ -304,22 +323,22 @@ def has_llm_api_keys(config: RLMConfig | None = None) -> bool:
 
 
 def show_claude_code_guidance() -> None:
-    """Show guidance for using RLM within Claude Code."""
+    """Show guidance for using Snipara Sandbox within Claude Code."""
     console.print()
     console.print(
         Panel(
             "[bold yellow]Running inside Claude Code without LLM API keys[/bold yellow]\n\n"
-            "The [cyan]rlm run[/cyan] and [cyan]rlm agent[/cyan] commands require an external LLM backend.\n"
+            "The [cyan]snipara-sandbox run[/cyan] and [cyan]snipara-sandbox agent[/cyan] commands require an external LLM backend.\n"
             "Since you're inside Claude Code, you have two options:\n\n"
             "[bold]Option 1: Use MCP Tools (Recommended)[/bold]\n"
             "Claude Code already provides these tools - no API keys needed:\n"
             "  • [green]execute_python[/green] - Run code in sandboxed REPL\n"
-            "  • [green]rlm_agent_run[/green] - Start autonomous agent task\n"
-            "  • [green]rlm_context_query[/green] - Query Snipara documentation\n\n"
+            "  • [green]snipara_agent_run[/green] - Start autonomous agent task\n"
+            "  • [green]snipara_context_query[/green] - Query Snipara documentation\n\n"
             "[bold]Option 2: Set API Keys[/bold]\n"
             "  [dim]export OPENAI_API_KEY=sk-...[/dim]\n"
             "  [dim]export ANTHROPIC_API_KEY=sk-ant-...[/dim]\n\n"
-            "[dim]Tip: Run 'rlm doctor' to check your setup[/dim]",
+            "[dim]Tip: Run 'snipara-sandbox doctor' to check your setup[/dim]",
             title="Claude Code Mode",
             border_style="yellow",
         )
@@ -351,7 +370,7 @@ def run(
     ),
     show_config: bool = typer.Option(False, "--show-config", help="Show effective config and exit"),
 ) -> None:
-    """Run a recursive completion with the RLM runtime."""
+    """Run a completion with the Snipara Sandbox runtime."""
     from rlm.core.config import load_config
     from rlm.core.orchestrator import RLM
     from rlm.core.types import CompletionOptions
@@ -630,17 +649,19 @@ def init(
     no_snipara: bool = typer.Option(False, "--no-snipara", help="Skip Snipara setup"),
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
 ) -> None:
-    """Initialize RLM configuration in a project."""
-    config_path = project_dir / "rlm.toml"
+    """Initialize Snipara Sandbox configuration in a project."""
+    config_path = project_dir / "snipara-sandbox.toml"
+    legacy_config_path = project_dir / "rlm.toml"
 
-    if config_path.exists() and not force:
-        console.print(f"[yellow]Config already exists:[/yellow] {config_path}")
+    if (config_path.exists() or legacy_config_path.exists()) and not force:
+        existing = config_path if config_path.exists() else legacy_config_path
+        console.print(f"[yellow]Config already exists:[/yellow] {existing}")
         console.print("Use --force to overwrite")
         raise typer.Exit(1)
 
-    config_content = """# RLM Runtime Configuration
+    config_content = """# Snipara Sandbox Configuration
 
-[rlm]
+[snipara_sandbox]
 backend = "litellm"
 model = "gpt-4o-mini"
 environment = "local"  # or "docker" for isolation
@@ -659,7 +680,7 @@ docker_memory = "512m"
         config_content += """
 # Snipara context optimization (recommended)
 # Get your API key at https://snipara.com/dashboard
-# snipara_api_key = "rlm_..."
+# snipara_api_key = "snp-..."
 # snipara_project_slug = "your-project"
 """
 
@@ -669,7 +690,7 @@ docker_memory = "512m"
     # Create .env.example
     env_example = project_dir / ".env.example"
     if not env_example.exists():
-        env_content = """# RLM Runtime Environment Variables
+        env_content = """# Snipara Sandbox Environment Variables
 
 # LLM API Keys (set the ones you need)
 OPENAI_API_KEY=
@@ -687,7 +708,9 @@ SNIPARA_PROJECT_SLUG=
         console.print(
             "[yellow]Tip:[/yellow] Get your Snipara API key at https://snipara.com/dashboard"
         )
-        console.print("     Then set snipara_api_key and snipara_project_slug in rlm.toml")
+        console.print(
+            "     Then set snipara_api_key and snipara_project_slug in snipara-sandbox.toml"
+        )
 
 
 @app.command()
@@ -771,12 +794,13 @@ def snipara_status(
     """Show Snipara authentication status and configuration.
 
     Displays which authentication method is active, available tokens,
-    and configuration from rlm.toml. Use this to debug auth issues.
+    and configuration from snipara-sandbox.toml or legacy rlm.toml.
+    Use this to debug auth issues.
 
     Quick Setup:
       1. OAuth (recommended): pip install snipara-mcp && snipara-mcp-login
-      2. API Key: export SNIPARA_API_KEY=rlm_... && export SNIPARA_PROJECT_SLUG=...
-      3. Config: Add snipara_api_key and snipara_project_slug to rlm.toml
+      2. API Key: export SNIPARA_API_KEY=snp-... && export SNIPARA_PROJECT_SLUG=...
+      3. Config: Add snipara_api_key and snipara_project_slug to snipara-sandbox.toml
     """
     import os
     from datetime import datetime, timezone
@@ -806,7 +830,7 @@ def snipara_status(
         console.print("    snipara-mcp-login")
         console.print()
         console.print("  Option 2 (API Key):")
-        console.print("    export SNIPARA_API_KEY=rlm_your_key_here")
+        console.print("    export SNIPARA_API_KEY=snp-your-key-here")
         console.print("    export SNIPARA_PROJECT_SLUG=your-project")
         console.print()
         console.print("  Get a free API key at: https://snipara.com/dashboard")
@@ -875,7 +899,7 @@ def snipara_status(
     console.print()
 
     # Config file settings
-    console.print("[bold]Config File (rlm.toml)[/bold]")
+    console.print("[bold]Config File (snipara-sandbox.toml or rlm.toml)[/bold]")
     if config.snipara_api_key:
         masked = (
             config.snipara_api_key[:8] + "..." + config.snipara_api_key[-4:]
@@ -925,9 +949,11 @@ def snipara_status(
     # Recommendations
     if not config.snipara_project_slug and len(tokens) > 1:
         console.print("[yellow]Tip:[/yellow] You have multiple OAuth tokens.")
-        console.print("     Set snipara_project_slug in rlm.toml to select a specific project:")
+        console.print(
+            "     Set snipara_project_slug in snipara-sandbox.toml to select a specific project:"
+        )
         console.print()
-        console.print("     [rlm]")
+        console.print("     [snipara_sandbox]")
         console.print('     snipara_project_slug = "your-project"')
 
 
@@ -935,14 +961,14 @@ def snipara_status(
 def mcp_serve() -> None:
     """Start the MCP server for Claude Desktop/Code integration.
 
-    This runs the RLM MCP server using stdio transport. Configure it in your
+    This runs the Snipara Sandbox MCP server using stdio transport. Configure it in your
     Claude settings:
 
     For Claude Desktop (~/.claude/claude_desktop_config.json):
     {
       "mcpServers": {
-        "rlm": {
-          "command": "rlm",
+        "snipara-sandbox": {
+          "command": "snipara-sandbox",
           "args": ["mcp-serve"]
         }
       }
@@ -951,8 +977,8 @@ def mcp_serve() -> None:
     For Claude Code (~/.claude/claude_code_config.json):
     {
       "mcpServers": {
-        "rlm": {
-          "command": "rlm",
+        "snipara-sandbox": {
+          "command": "snipara-sandbox",
           "args": ["mcp-serve"]
         }
       }
@@ -964,7 +990,7 @@ def mcp_serve() -> None:
         run_server()
     except ImportError as e:
         console.print("[red]Error:[/red] MCP dependencies not installed")
-        console.print("Install with: pip install rlm-runtime[mcp]")
+        console.print("Install with: pip install snipara-sandbox[mcp]")
         console.print(f"Details: {e}")
         raise typer.Exit(1) from None
 
@@ -976,7 +1002,7 @@ def visualize(
 ) -> None:
     """Launch the trajectory visualizer web UI.
 
-    Opens an interactive Streamlit dashboard to explore RLM execution
+    Opens an interactive Streamlit dashboard to explore Snipara Sandbox execution
     trajectories, view token usage, and debug completions.
     """
     try:
@@ -987,8 +1013,9 @@ def visualize(
 
         from rlm.visualizer import app as viz_app
 
-        # Set log directory as environment variable for the app
-        os.environ["RLM_LOG_DIR"] = str(log_dir.absolute())
+        # Set log directory as environment variable for the app.
+        os.environ["SNIPARA_SANDBOX_LOG_DIR"] = str(log_dir.absolute())
+        os.environ.setdefault("RLM_LOG_DIR", str(log_dir.absolute()))
 
         console.print(f"[green]Starting visualizer on port {port}...[/green]")
         console.print(f"[dim]Log directory: {log_dir}[/dim]")
@@ -1011,16 +1038,16 @@ def visualize(
 
     except ImportError as e:
         console.print("[red]Error:[/red] Visualizer dependencies not installed")
-        console.print("Install with: pip install rlm-runtime[visualizer]")
+        console.print("Install with: pip install snipara-sandbox[visualizer]")
         console.print(f"Details: {e}")
         raise typer.Exit(1) from None
 
 
 @app.command()
 def doctor() -> None:
-    """Check RLM runtime setup and dependencies."""
+    """Check Snipara Sandbox runtime setup and dependencies."""
     _load_project_env()
-    console.print("[bold]RLM Runtime Doctor[/bold]")
+    console.print("[bold]Snipara Sandbox Doctor[/bold]")
     console.print()
 
     checks: list[tuple[str, bool, str]] = []
@@ -1067,7 +1094,7 @@ def doctor() -> None:
         checks.append(("Docker daemon", False, str(e)[:30]))
 
     # Check config file
-    config_path = Path("rlm.toml")
+    config_path = _default_config_path()
     if config_path.exists():
         checks.append(("Config file", True, str(config_path)))
     else:

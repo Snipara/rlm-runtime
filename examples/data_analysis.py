@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Data Analysis Example with RLM Runtime
+Data Analysis Example with Snipara Sandbox
 
-This example demonstrates using RLM Runtime for data analysis tasks,
+This example demonstrates using Snipara Sandbox for data analysis tasks,
 including CSV processing and generating reports.
 """
 
@@ -10,13 +10,13 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 
 async def main():
     """Run data analysis examples."""
-    # Create RLM with Docker for better isolation
-    rlm = RLM(
+    # Create Snipara Sandbox with Docker for better isolation
+    sandbox = SniparaSandbox(
         model="gpt-4o-mini",
         environment="docker",
         max_depth=6,
@@ -39,7 +39,7 @@ Grace,27,Marketing,62000
     try:
         # Analyze the data
         print("=== Data Analysis ===")
-        result = await rlm.completion(f"""
+        result = await sandbox.completion(f"""
             Analyze the CSV file at {csv_path}:
             1. Load the data
             2. Calculate average salary by department
@@ -52,7 +52,7 @@ Grace,27,Marketing,62000
 
         # Generate insights
         print("=== Generate Insights ===")
-        result = await rlm.completion(f"""
+        result = await sandbox.completion(f"""
             From the employee data in {csv_path}:
             1. Identify any salary outliers
             2. Calculate the salary range

@@ -1,6 +1,6 @@
-"""RLM Runtime exceptions.
+"""Snipara Sandbox exceptions.
 
-This module defines the exception hierarchy for RLM Runtime.
+This module defines the exception hierarchy for Snipara Sandbox.
 All RLM-specific exceptions inherit from RLMError.
 
 Example:

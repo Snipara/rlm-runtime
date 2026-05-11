@@ -1,11 +1,11 @@
-# @rlm/runtime
+# @snipara/sandbox
 
-TypeScript SDK for RLM Runtime - Sandboxed Python execution for AI agents.
+TypeScript SDK for Snipara Sandbox - Sandboxed Python execution for AI agents.
 
 ## Installation
 
 ```bash
-npm install @rlm/runtime
+npm install @snipara/sandbox
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ import type {
   AgentResult,
   TrustLevel,
   ExecutionProfile,
-} from '@rlm/runtime';
+} from '@snipara/sandbox';
 
 // Type-safe parameters for execute_python
 const params: ExecutePythonParams = {
@@ -40,7 +40,7 @@ import {
   MCP_TOOLS,
   isImportAllowed,
   getProfile,
-} from '@rlm/runtime';
+} from '@snipara/sandbox';
 
 // Check execution profiles
 console.log(EXECUTION_PROFILES.analysis);
@@ -81,9 +81,9 @@ console.log(MCP_TOOLS.EXECUTE_PYTHON); // 'execute_python'
 | `clear_repl_context` | Clear session state |
 | `list_sessions` | List active sessions |
 | `destroy_session` | Destroy a session |
-| `rlm_agent_run` | Start autonomous agent |
-| `rlm_agent_status` | Check agent status |
-| `rlm_agent_cancel` | Cancel running agent |
+| `snipara_agent_run` | Start autonomous agent |
+| `snipara_agent_status` | Check agent status |
+| `snipara_agent_cancel` | Cancel running agent |
 
 ## License
 

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This document covers deployment strategies, Docker usage, CI/CD, and production considerations for RLM Runtime.
+This document covers deployment strategies, Docker usage, CI/CD, and production considerations for Snipara Sandbox.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ This document covers deployment strategies, Docker usage, CI/CD, and production 
 
 ## Overview
 
-RLM Runtime can be deployed in various environments:
+Snipara Sandbox can be deployed in various environments:
 
 | Environment | Use Case | Isolation |
 |-------------|----------|-----------|
@@ -35,7 +35,7 @@ RLM Runtime can be deployed in various environments:
         ┌─────────────┼─────────────┐
         ▼             ▼             ▼
 ┌───────────┐  ┌───────────┐  ┌───────────┐
-│  RLM Pod  │  │  RLM Pod  │  │  RLM Pod  │
+│  Snipara Sandbox Pod  │  │  Snipara Sandbox Pod  │  │  Snipara Sandbox Pod  │
 │  (Docker) │  │  (Docker) │  │  (Docker) │
 └───────────┘  └───────────┘  └───────────┘
         │             │             │
@@ -58,8 +58,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install RLM Runtime
-RUN pip install rlm-runtime[docker,mcp]
+# Install Snipara Sandbox
+RUN pip install snipara-sandbox[docker,mcp]
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /entrypoint.sh
@@ -71,16 +71,16 @@ CMD ["mcp-serve"]
 
 ```bash
 # Build image
-docker build -t rlm-runtime:latest .
+docker build -t snipara-sandbox:latest .
 
 # Run container
 docker run -d \
-  --name rlm \
+  --name snipara-sandbox \
   -p 8080:8080 \
-  -e RLM_MODEL=gpt-4o \
-  -e RLM_ENVIRONMENT=docker \
-  -v rlm-logs:/app/logs \
-  rlm-runtime:latest
+  -e SNIPARA_SANDBOX_MODEL=gpt-4o \
+  -e SNIPARA_SANDBOX_ENVIRONMENT=docker \
+  -v snipara-sandbox-logs:/app/logs \
+  snipara-sandbox:latest
 ```
 
 ### Docker Compose
@@ -90,20 +90,20 @@ docker run -d \
 version: '3.8'
 
 services:
-  rlm:
+  snipara-sandbox:
     build: .
     ports:
       - "8080:8080"
     environment:
-      - RLM_MODEL=gpt-4o
-      - RLM_ENVIRONMENT=docker
-      - RLM_LOG_DIR=/app/logs
-      - RLM_DOCKER_MEMORY=1g
-      - RLM_DOCKER_CPUS=2.0
+      - SNIPARA_SANDBOX_MODEL=gpt-4o
+      - SNIPARA_SANDBOX_ENVIRONMENT=docker
+      - SNIPARA_SANDBOX_LOG_DIR=/app/logs
+      - SNIPARA_SANDBOX_DOCKER_MEMORY=1g
+      - SNIPARA_SANDBOX_DOCKER_CPUS=2.0
       - SNIPARA_API_KEY=${SNIPARA_API_KEY}
       - SNIPARA_PROJECT_SLUG=${SNIPARA_PROJECT_SLUG}
     volumes:
-      - rlm-logs:/app/logs
+      - snipara-sandbox-logs:/app/logs
     deploy:
       resources:
         limits:
@@ -111,13 +111,13 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "rlm", "doctor"]
+      test: ["CMD", "snipara-sandbox", "doctor"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 volumes:
-  rlm-logs:
+  snipara-sandbox-logs:
 ```
 
 ```bash
@@ -125,7 +125,7 @@ volumes:
 docker-compose up -d
 
 # View logs
-docker-compose logs -f rlm
+docker-compose logs -f snipara-sandbox
 
 # Stop services
 docker-compose down
@@ -144,10 +144,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Build and install RLM
+# Build and install Snipara Sandbox
 RUN pip install --no-cache-dir \
     --prefix=/install \
-    rlm-runtime[docker,mcp,visualizer]
+    snipara-sandbox[docker,mcp,visualizer]
 
 # Final stage
 FROM python:3.11-slim
@@ -158,17 +158,17 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 # Create non-root user
-RUN useradd -m rlm && chown -R rlm:rlm /app
-USER rlm
+RUN useradd -m snipara && chown -R snipara:snipara /app
+USER snipara
 
 # Default environment
-ENV RLM_ENVIRONMENT=docker \
-    RLM_LOG_DIR=/app/logs \
-    RLM_DOCKER_MEMORY=512m \
-    RLM_DOCKER_CPUS=1.0
+ENV SNIPARA_SANDBOX_ENVIRONMENT=docker \
+    SNIPARA_SANDBOX_LOG_DIR=/app/logs \
+    SNIPARA_SANDBOX_DOCKER_MEMORY=512m \
+    SNIPARA_SANDBOX_DOCKER_CPUS=1.0
 
 # Create log directory
-RUN mkdir -p /app/logs && chown rlm:rlm /app/logs
+RUN mkdir -p /app/logs && chown snipara:snipara /app/logs
 
 EXPOSE 8080
 
@@ -186,40 +186,40 @@ CMD ["mcp-serve"]
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rlm-runtime
+  name: snipara-sandbox
   labels:
-    app: rlm-runtime
+    app: snipara-sandbox
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: rlm-runtime
+      app: snipara-sandbox
   template:
     metadata:
       labels:
-        app: rlm-runtime
+        app: snipara-sandbox
     spec:
-      serviceAccountName: rlm
+      serviceAccountName: snipara-sandbox
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
       containers:
-      - name: rlm
-        image: rlm-runtime:latest
+      - name: snipara-sandbox
+        image: snipara-sandbox:latest
         ports:
         - containerPort: 8080
         env:
-        - name: RLM_MODEL
+        - name: SNIPARA_SANDBOX_MODEL
           value: "gpt-4o"
-        - name: RLM_ENVIRONMENT
+        - name: SNIPARA_SANDBOX_ENVIRONMENT
           value: "docker"
-        - name: RLM_LOG_DIR
+        - name: SNIPARA_SANDBOX_LOG_DIR
           value: "/app/logs"
         - name: SNIPARA_API_KEY
           valueFrom:
             secretKeyRef:
-              name: rlm-secrets
+              name: snipara-sandbox-secrets
               key: snipara-api-key
         resources:
           requests:
@@ -233,26 +233,26 @@ spec:
           mountPath: /app/logs
         livenessProbe:
           exec:
-            command: ["rlm", "doctor"]
+            command: ["snipara-sandbox", "doctor"]
           initialDelaySeconds: 30
           periodSeconds: 60
         readinessProbe:
           exec:
-            command: ["rlm", "doctor"]
+            command: ["snipara-sandbox", "doctor"]
           initialDelaySeconds: 10
           periodSeconds: 30
       volumes:
       - name: logs
         persistentVolumeClaim:
-          claimName: rlm-logs-pvc
+          claimName: snipara-sandbox-logs-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rlm-service
+  name: snipara-sandbox-service
 spec:
   selector:
-    app: rlm-runtime
+    app: snipara-sandbox
   ports:
   - port: 80
     targetPort: 8080
@@ -266,12 +266,12 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rlm-hpa
+  name: snipara-sandbox-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: rlm-runtime
+    name: snipara-sandbox
   minReplicas: 3
   maxReplicas: 20
   metrics:
@@ -298,20 +298,20 @@ spec:
 ```python
 # lambda/handler.py
 import json
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 import asyncio
 
 # Cold start initialization
-rlm = RLM(
+sandbox = SniparaSandbox(
     model="gpt-4o-mini",
     environment="docker",
 )
 
 async def handler(event, context):
-    """Lambda handler for RLM Runtime."""
+    """Lambda handler for Snipara Sandbox."""
     try:
         prompt = event.get("prompt", "")
-        result = await rlm.completion(prompt)
+        result = await sandbox.completion(prompt)
 
         return {
             "statusCode": 200,
@@ -334,26 +334,26 @@ async def handler(event, context):
 
 ```python
 # main.py
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 import asyncio
 
-rlm = None
+sandbox = None
 
-def init_rlm():
-    global rlm
-    if rlm is None:
-        rlm = RLM(
+def init_sandbox():
+    global sandbox
+    if sandbox is None:
+        sandbox = SniparaSandbox(
             model="gpt-4o-mini",
             environment="docker",
         )
 
 def completion(request):
-    init_rlm()
+    init_sandbox()
 
     request_json = request.get_json(silent=True)
     prompt = request_json.get("prompt", "")
 
-    result = asyncio.run(rlm.completion(prompt))
+    result = asyncio.run(sandbox.completion(prompt))
 
     return {"response": result.response}
 ```
@@ -396,10 +396,10 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -e ".[dev]"
-        pip install rlm-runtime[docker]
+        pip install snipara-sandbox[docker]
 
     - name: Run tests
-      run: pytest --cov=rlm
+      run: pytest
 
     - name: Lint
       run: |
@@ -408,8 +408,8 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t rlm-runtime:${{ github.sha }} .
-        docker tag rlm-runtime:${{ github.sha }} rlm-runtime:latest
+        docker build -t snipara-sandbox:${{ github.sha }} .
+        docker tag snipara-sandbox:${{ github.sha }} snipara-sandbox:latest
 
   deploy-staging:
     needs: test
@@ -420,11 +420,11 @@ jobs:
     - name: Deploy to staging
       run: |
         # Push to registry
-        docker push registry.example.com/rlm-runtime:${{ github.sha }}
+        docker push registry.example.com/snipara-sandbox:${{ github.sha }}
 
         # Update Kubernetes
-        kubectl set image deployment/rlm-runtime \
-          rlm=registry.example.com/rlm-runtime:${{ github.sha }} \
+        kubectl set image deployment/snipara-sandbox \
+          snipara-sandbox=registry.example.com/snipara-sandbox:${{ github.sha }} \
           -n staging
 
   deploy-production:
@@ -498,10 +498,10 @@ from prometheus_client import Counter, Histogram, start_http_server
 start_http_server(8000)
 
 # Define metrics
-REQUEST_COUNT = Counter('rlm_requests_total', 'Total requests')
-REQUEST_LATENCY = Histogram('rlm_request_duration_seconds', 'Request latency')
-TOKEN_USAGE = Histogram('rlm_tokens_used_total', 'Tokens per request')
-COST_USAGE = Counter('rlm_cost_usd_total', 'Total cost in USD')
+REQUEST_COUNT = Counter('snipara_sandbox_requests_total', 'Total requests')
+REQUEST_LATENCY = Histogram('snipara_sandbox_request_duration_seconds', 'Request latency')
+TOKEN_USAGE = Histogram('snipara_sandbox_tokens_used_total', 'Tokens per request')
+COST_USAGE = Counter('snipara_sandbox_cost_usd_total', 'Total cost in USD')
 ```
 
 ### Health Checks
@@ -546,7 +546,7 @@ log = structlog.get_logger()
 
 ### Horizontal Scaling
 
-1. **Load Balancer** - Distribute requests across RLM pods
+1. **Load Balancer** - Distribute requests across Snipara Sandbox pods
 2. **Stateless Design** - No shared state between requests
 3. **Shared Storage** - Use S3 or similar for trajectory logs
 4. **Connection Pooling** - For database-backed features
@@ -566,11 +566,11 @@ from redis import Redis
 from rq import Queue
 
 redis = Redis()
-queue = Queue('rlm-tasks', connection=redis)
+queue = Queue('snipara-sandbox-tasks', connection=redis)
 
 def process_completion(prompt, **kwargs):
-    rlm = RLM(**kwargs)
-    result = asyncio.run(rlm.completion(prompt))
+    sandbox = SniparaSandbox(**kwargs)
+    result = asyncio.run(sandbox.completion(prompt))
     return result
 
 # Enqueue task

@@ -1,1 +1,1 @@
-"""RLM Runtime tests."""
+"""Snipara Sandbox tests."""

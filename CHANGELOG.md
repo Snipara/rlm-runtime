@@ -2,12 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.2.0] - 2026-05-11
+
+### Changed
+
+- Renamed the published Python distribution to `snipara-sandbox`.
+- Added the `snipara-sandbox` CLI while keeping `rlm` as a legacy command alias.
+- Added the `snipara_sandbox` Python import surface while keeping `rlm` imports compatible.
+- Renamed public MCP server identity and agent tools to Snipara-first names, with legacy `rlm_*` aliases retained.
+- Switched generated API key examples to the `snp-` prefix.
+- Updated documentation, install scripts, and package metadata for the `Snipara/snipara-sandbox` repository.
+
 ## [2.1.3] - 2026-04-29
 
 ### Added
 
-- `rlm config show` for inspecting the effective runtime configuration.
-- `--json` output for `rlm config show`.
+- `snipara-sandbox config show` for inspecting the effective runtime configuration.
+- `--json` output for `snipara-sandbox config show`.
 
 ### Changed
 
@@ -20,7 +31,7 @@ All notable changes to this project are documented in this file.
 
 - `rlm --version` now works from the root CLI entrypoint.
 - CLI version output now reflects the source version and the installed package version when they differ.
-- Project `.env` files are loaded automatically by the CLI and config loader, so `rlm doctor` and `rlm run` no longer depend on manual `source .env`.
+- Project `.env` files are loaded automatically by the CLI and config loader, so `snipara-sandbox doctor` and `snipara-sandbox run` no longer depend on manual `source .env`.
 - Failed runs now return non-zero exit codes instead of reporting `success: true`.
 - CLI JSON mode now emits clean JSON without debug logs mixed into stdout.
 - `--max-depth 0` is rejected immediately with a clear error.
@@ -29,7 +40,7 @@ All notable changes to this project are documented in this file.
 
 - Added explicit failure propagation to `RLMResult`.
 - Added tests covering CLI version handling, `.env` loading, JSON output, and max-depth validation.
-- Documented the confirmed bugs, fixes, and remaining notes in `docs/rlm-runtime-audit-2026-04-29.md`.
+- Documented the confirmed bugs, fixes, and remaining notes in `docs/snipara-sandbox-audit-2026-04-29.md`.
 
 ### Notes
 

@@ -1,4 +1,4 @@
-"""MCP Server implementation for RLM Runtime.
+"""MCP Server implementation for Snipara Sandbox.
 
 This module provides an MCP (Model Context Protocol) server that exposes
 a sandboxed Python execution environment to Claude Desktop, Claude Code,
@@ -14,9 +14,9 @@ Tools provided:
 - clear_repl_context: Clear the REPL context
 - list_sessions: List active REPL sessions
 - destroy_session: Destroy a REPL session
-- rlm_agent_run: Start an autonomous agent task
-- rlm_agent_status: Check agent run status
-- rlm_agent_cancel: Cancel a running agent
+- snipara_agent_run: Start an autonomous agent task
+- snipara_agent_status: Check agent run status
+- snipara_agent_cancel: Cancel a running agent
 """
 
 from __future__ import annotations
@@ -226,7 +226,7 @@ class AgentManager:
 
 def create_server() -> Server:
     """Create and configure the MCP server with code sandbox tools."""
-    server = Server("rlm-runtime")
+    server = Server("snipara-sandbox")
 
     # Load config to get trust_level
     try:
@@ -241,7 +241,7 @@ def create_server() -> Server:
 
     @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
     async def list_tools() -> list[Tool]:
-        """List available RLM tools."""
+        """List available Snipara Sandbox tools."""
         return [
             Tool(
                 name="execute_python",
@@ -365,7 +365,7 @@ def create_server() -> Server:
                 },
             ),
             Tool(
-                name="rlm_agent_run",
+                name="snipara_agent_run",
                 description=(
                     "Start an autonomous agent that iteratively solves a task. "
                     "The agent loops: observe -> think -> act -> terminate. "
@@ -399,7 +399,7 @@ def create_server() -> Server:
                 },
             ),
             Tool(
-                name="rlm_agent_status",
+                name="snipara_agent_status",
                 description=(
                     "Check the status of an autonomous agent run. "
                     "Returns running/completed/error status and the result if done."
@@ -409,7 +409,64 @@ def create_server() -> Server:
                     "properties": {
                         "run_id": {
                             "type": "string",
-                            "description": "The agent run ID from rlm_agent_run",
+                            "description": "The agent run ID from snipara_agent_run",
+                        },
+                    },
+                    "required": ["run_id"],
+                },
+            ),
+            Tool(
+                name="snipara_agent_cancel",
+                description="Cancel a running autonomous agent.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "run_id": {
+                            "type": "string",
+                            "description": "The agent run ID to cancel",
+                        },
+                    },
+                    "required": ["run_id"],
+                },
+            ),
+            Tool(
+                name="rlm_agent_run",
+                description="Legacy alias for snipara_agent_run.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "task": {
+                            "type": "string",
+                            "description": "The task for the agent to solve",
+                        },
+                        "max_iterations": {
+                            "type": "integer",
+                            "description": "Maximum iterations (default: 10, max: 50)",
+                            "default": 10,
+                        },
+                        "token_budget": {
+                            "type": "integer",
+                            "description": "Token budget (default: 50000)",
+                            "default": 50000,
+                        },
+                        "cost_limit": {
+                            "type": "number",
+                            "description": "Cost limit in USD (default: 2.0, max: 10.0)",
+                            "default": 2.0,
+                        },
+                    },
+                    "required": ["task"],
+                },
+            ),
+            Tool(
+                name="rlm_agent_status",
+                description="Legacy alias for snipara_agent_status.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "run_id": {
+                            "type": "string",
+                            "description": "The agent run ID from snipara_agent_run",
                         },
                     },
                     "required": ["run_id"],
@@ -417,7 +474,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="rlm_agent_cancel",
-                description="Cancel a running autonomous agent.",
+                description="Legacy alias for snipara_agent_cancel.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -458,13 +515,13 @@ def create_server() -> Server:
         elif name == "destroy_session":
             return await _destroy_session(sessions, arguments)
 
-        elif name == "rlm_agent_run":
+        elif name in {"snipara_agent_run", "rlm_agent_run"}:
             return await _agent_run(agents, sessions, arguments)
 
-        elif name == "rlm_agent_status":
+        elif name in {"snipara_agent_status", "rlm_agent_status"}:
             return await _agent_status(agents, arguments)
 
-        elif name == "rlm_agent_cancel":
+        elif name in {"snipara_agent_cancel", "rlm_agent_cancel"}:
             return await _agent_cancel(agents, arguments)
 
         else:

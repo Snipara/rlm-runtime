@@ -13,8 +13,8 @@ class TestAgentSystemPrompt:
         assert "terminate" in AGENT_SYSTEM_PROMPT.lower()
 
     def test_mentions_snipara_tools(self):
-        assert "rlm_context_query" in AGENT_SYSTEM_PROMPT
-        assert "rlm_remember" in AGENT_SYSTEM_PROMPT
+        assert "snipara_context_query" in AGENT_SYSTEM_PROMPT
+        assert "snipara_remember" in AGENT_SYSTEM_PROMPT
 
 
 class TestBuildIterationPrompt:

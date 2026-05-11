@@ -1,6 +1,6 @@
 # Testing Documentation
 
-This document explains how to run tests, the test structure, and how to add new tests to RLM Runtime.
+This document explains how to run tests, the test structure, and how to add new tests to Snipara Sandbox.
 
 ## Table of Contents
 
@@ -109,13 +109,13 @@ tests/
 
 ```python
 import pytest
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 @pytest.mark.asyncio
 async def test_basic_completion():
     """Test basic completion functionality."""
-    rlm = RLM(model="gpt-4o-mini")
-    result = await rlm.completion("Say hello")
+    sandbox = SniparaSandbox(model="gpt-4o-mini")
+    result = await sandbox.completion("Say hello")
     assert result.response
     assert result.total_calls == 1
 ```
@@ -124,7 +124,7 @@ async def test_basic_completion():
 
 ```python
 import pytest
-from rlm.repl.local import LocalREPL
+from snipara_sandbox.repl.local import LocalREPL
 
 class TestLocalREPL:
     """Test suite for LocalREPL."""
@@ -170,15 +170,15 @@ async def test_math_operations(repl, code, expected):
 
 ```python
 import pytest
-from rlm.core.exceptions import MaxDepthExceeded, TokenBudgetExhausted
+from snipara_sandbox.core.exceptions import MaxDepthExceeded, TokenBudgetExhausted
 
 @pytest.mark.asyncio
 async def test_max_depth_exceeded():
     """Test that max depth limit is enforced."""
-    rlm = RLM(model="gpt-4o-mini", max_depth=1)
+    sandbox = SniparaSandbox(model="gpt-4o-mini", max_depth=1)
 
     with pytest.raises(MaxDepthExceeded) as exc_info:
-        await rlm.completion("Recursive task that exceeds depth")
+        await sandbox.completion("Recursive task that exceeds depth")
 
     assert exc_info.value.depth == 1
     assert exc_info.value.max_depth == 1
@@ -193,7 +193,7 @@ async def test_max_depth_exceeded():
 ```python
 import pytest
 import asyncio
-from rlm import RLM
+from snipara_sandbox import SniparaSandbox
 
 @pytest.fixture
 def event_loop():
@@ -203,14 +203,14 @@ def event_loop():
     loop.close()
 
 @pytest.fixture
-def rlm():
-    """Create a basic RLM instance."""
-    return RLM(model="gpt-4o-mini")
+def sandbox():
+    """Create a basic Snipara Sandbox instance."""
+    return SniparaSandbox(model="gpt-4o-mini")
 
 @pytest.fixture
-def rlm_docker():
-    """Create a Docker-based RLM instance."""
-    return RLM(model="gpt-4o-mini", environment="docker")
+def sandbox_docker():
+    """Create a Docker-based Snipara Sandbox instance."""
+    return SniparaSandbox(model="gpt-4o-mini", environment="docker")
 
 @pytest.fixture
 def sample_csv(tmp_path):
@@ -246,8 +246,8 @@ async def test_with_mocked_llm():
     with patch('rlm.backends.litellm.LiteLLMBackend._complete') as mock:
         mock.return_value = mock_response
 
-        rlm = RLM(model="gpt-4o-mini")
-        result = await rlm.completion("Test prompt")
+        sandbox = SniparaSandbox(model="gpt-4o-mini")
+        result = await sandbox.completion("Test prompt")
 
         assert result.response == "Mocked response"
         mock.assert_called_once()
@@ -447,15 +447,15 @@ Test edge cases and error conditions:
 @pytest.mark.asyncio
 async def test_empty_prompt_handling():
     """Test that empty prompts are handled gracefully."""
-    rlm = RLM(model="gpt-4o-mini")
-    result = await rlm.completion("")
+    sandbox = SniparaSandbox(model="gpt-4o-mini")
+    result = await sandbox.completion("")
     assert result.response  # Should still get a response
 
 @pytest.mark.asyncio
 async def test_very_long_prompt():
     """Test handling of prompts near token limits."""
     long_prompt = "word " * 10000  # ~70K tokens
-    rlm = RLM(model="gpt-4o-mini", token_budget=1000)
+    sandbox = SniparaSandbox(model="gpt-4o-mini", token_budget=1000)
     # Should handle gracefully
 ```
 
@@ -469,8 +469,8 @@ async def test_very_long_prompt():
 @pytest.mark.asyncio
 async def test_debug_example():
     """Debug test with print output."""
-    rlm = RLM(model="gpt-4o-mini", verbose=True)
-    result = await rlm.completion("Debug prompt")
+    sandbox = SniparaSandbox(model="gpt-4o-mini", verbose=True)
+    result = await sandbox.completion("Debug prompt")
     print(f"Result: {result}")
     print(f"Trajectory: {result.events}")
 ```
@@ -483,10 +483,10 @@ async def test_with_pdb():
     """Debug with pdb."""
     import pdb
 
-    rlm = RLM(model="gpt-4o-mini")
+    sandbox = SniparaSandbox(model="gpt-4o-mini")
 
     pdb.set_trace()
-    result = await rlm.completion("Test")
+    result = await sandbox.completion("Test")
 ```
 
 ### pytest-sugar

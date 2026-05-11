@@ -1,8 +1,8 @@
-# Autonomous RLM Agent (Phase 9) ✅
+# Autonomous Snipara Sandbox Agent (Phase 9) ✅
 
 ## Status: Implemented
 
-The Autonomous RLM Agent implements the full Recursive Language Model loop. The model explores documentation, writes and executes code, spawns sub-LLM calls, and terminates when it has enough information to answer.
+The Autonomous Snipara Sandbox Agent implements the full Recursive Language Model loop. The model explores documentation, writes and executes code, spawns sub-LLM calls, and terminates when it has enough information to answer.
 
 This is the capstone feature that combines all prior capabilities:
 - **REPL execution** (Phase 1) -- Run code in sandboxed environments
@@ -10,14 +10,14 @@ This is the capstone feature that combines all prior capabilities:
 - **Sub-LLM Orchestration** (Phase 8) -- Recursive sub-calls with budget control
 - **Cost tracking** (Phase 4) -- Full cost visibility across the agent loop
 
-## The RLM Loop
+## The Snipara Sandbox Loop
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  RLM Agent Loop                                                 │
+│  Snipara Sandbox Agent Loop                                                 │
 │                                                                  │
 │  1. OBSERVE                                                      │
-│     - Load project context (Snipara rlm_context_query)          │
+│     - Load project context (Snipara snipara_context_query)          │
 │     - Scan documentation structure                               │
 │     - Review existing code                                       │
 │                                                                  │
@@ -54,8 +54,8 @@ This is the capstone feature that combines all prior capabilities:
 | `src/rlm/agent/terminal.py` | `AgentState` + `FINAL`/`FINAL_VAR` tool definitions |
 | `src/rlm/agent/prompts.py` | System prompt and iteration prompt builder |
 | `src/rlm/agent/guardrails.py` | `check_iteration_allowed()` safety checks |
-| `src/rlm/mcp/server.py` | MCP tools: `rlm_agent_run`, `rlm_agent_status`, `rlm_agent_cancel` |
-| `src/rlm/cli/main.py` | `rlm agent` CLI command with Rich output |
+| `src/rlm/mcp/server.py` | MCP tools: `snipara_agent_run`, `snipara_agent_status`, `snipara_agent_cancel` |
+| `src/rlm/cli/main.py` | `snipara-sandbox agent` CLI command with Rich output |
 | `src/rlm/core/exceptions.py` | `AgentError`, `AgentIterationLimitExceeded`, `AgentCostLimitExceeded`, `AgentCancelled` |
 
 ### Test Files
@@ -110,8 +110,8 @@ FINAL_VAR(variable_name="result")  # Returns 4950
 
 ```python
 class AgentRunner:
-    def __init__(self, rlm: RLM, config: AgentConfig | None = None):
-        self.rlm = rlm
+    def __init__(self, sandbox: SniparaSandbox, config: AgentConfig | None = None):
+        self.sandbox = sandbox
         self.config = config or AgentConfig()
 
     async def run(self, task: str) -> AgentResult:
@@ -122,7 +122,7 @@ class AgentRunner:
         #    b. Check guardrails (iteration, cost, token limits)
         #    c. Build iteration prompt with previous actions summary
         #    d. Force FINAL instruction on last iteration
-        #    e. result = await rlm.completion(prompt, system, options)
+        #    e. result = await sandbox.completion(prompt, system, options)
         #    f. Track tokens/cost, accumulate events
         #    g. Record tool call summaries for next iteration context
         #    h. if state.is_terminal: return AgentResult(success)
@@ -139,16 +139,16 @@ class AgentRunner:
 
 ### Key Design Decisions
 
-1. **Each iteration = one `rlm.completion()` call**: Context carried forward via previous_actions summary
+1. **Each iteration = one `sandbox.completion()` call**: Context carried forward via previous_actions summary
 2. **FINAL/FINAL_VAR are tools**: Registered in tool registry per agent run, cleaned up in `finally` block
-3. **Auto-context on first iteration**: If Snipara is configured and `auto_context=True`, `rlm_context_query` is called with the task to inject relevant documentation into the system prompt
+3. **Auto-context on first iteration**: If Snipara is configured and `auto_context=True`, `snipara_context_query` is called with the task to inject relevant documentation into the system prompt
 4. **Iteration budget slicing**: Each iteration gets `min(remaining, token_budget // max_iterations * 2)` tokens
 5. **Previous actions**: Last 5 actions summarized as context for next iteration (prevents context explosion)
 
 ## AgentConfig
 
 ```python
-from rlm.agent.config import AgentConfig
+from snipara_sandbox.agent.config import AgentConfig
 
 # Hard safety limits (non-configurable, clamped in __post_init__)
 ABSOLUTE_MAX_ITERATIONS = 50
@@ -178,7 +178,7 @@ assert config.max_iterations == 50  # Clamped to ABSOLUTE_MAX_ITERATIONS
 ## AgentResult
 
 ```python
-from rlm.agent.result import AgentResult
+from snipara_sandbox.agent.result import AgentResult
 
 result = await runner.run("What is 2+2?")
 
@@ -238,7 +238,7 @@ The `AGENT_SYSTEM_PROMPT` ([prompts.py](../src/rlm/agent/prompts.py)) instructs 
 - Available tools (explore, analyze, delegate, terminate)
 - When to use FINAL vs FINAL_VAR
 - Budget awareness
-- Snipara tool names (rlm_context_query, rlm_remember)
+- Snipara tool names (snipara_context_query, snipara_remember)
 
 ### Iteration Prompt
 
@@ -265,10 +265,10 @@ Output includes:
 
 ```bash
 # Basic agent run
-rlm agent "What is 2+2?"
+snipara-sandbox agent "What is 2+2?"
 
 # With all options
-rlm agent "Explain the auth system" \
+snipara-sandbox agent "Explain the auth system" \
     --model claude-sonnet-4-20250514 \
     --backend litellm \
     --env docker \
@@ -280,10 +280,10 @@ rlm agent "Explain the auth system" \
     --verbose
 
 # JSON output for scripting
-rlm agent "Count lines in main.py" --json
+snipara-sandbox agent "Count lines in main.py" --json
 
 # Disable auto-context
-rlm agent "Simple math" --no-auto-context
+snipara-sandbox agent "Simple math" --no-auto-context
 ```
 
 ### CLI Output
@@ -325,7 +325,7 @@ The CLI uses Rich for formatted output:
 
 Three MCP tools are added to `src/rlm/mcp/server.py` for Claude Desktop/Code integration:
 
-### `rlm_agent_run`
+### `snipara_agent_run`
 
 Start an autonomous agent as an async task.
 
@@ -347,7 +347,7 @@ Start an autonomous agent as an async task.
 }
 ```
 
-### `rlm_agent_status`
+### `snipara_agent_status`
 
 Check the status of a running or completed agent.
 
@@ -374,7 +374,7 @@ Check the status of a running or completed agent.
 }
 ```
 
-### `rlm_agent_cancel`
+### `snipara_agent_cancel`
 
 Cancel a running agent.
 
@@ -401,11 +401,11 @@ class AgentManager:
 ## Python API
 
 ```python
-from rlm.core.orchestrator import RLM
-from rlm.agent import AgentRunner, AgentConfig
+from snipara_sandbox import SniparaSandbox
+from snipara_sandbox.agent import AgentRunner, AgentConfig
 
-# Create RLM instance
-rlm = RLM(
+# Create Snipara Sandbox instance
+sandbox = SniparaSandbox(
     model="claude-sonnet-4-20250514",
     environment="docker",
 )
@@ -419,7 +419,7 @@ config = AgentConfig(
 )
 
 # Run agent
-runner = AgentRunner(rlm, config)
+runner = AgentRunner(sandbox, config)
 result = await runner.run(
     "How does the payment webhook handler validate Stripe signatures?"
 )
@@ -446,20 +446,20 @@ Each iteration, the agent has access to all registered tools:
 | `execute_python` | REPL | Run code in sandbox |
 | `get_repl_context` | REPL | Read persistent variables |
 | `set_repl_context` | REPL | Write persistent variables |
-| `rlm_context_query` | Snipara | Semantic documentation search |
-| `rlm_search` | Snipara | Regex documentation search |
-| `rlm_shared_context` | Snipara | Team guidelines and best practices |
-| `rlm_remember` | Snipara | Store memories (when `memory_enabled`) |
-| `rlm_recall` | Snipara | Recall memories (when `memory_enabled`) |
-| `rlm_sub_complete` | Sub-LLM | Delegate focused sub-problems |
-| `rlm_batch_complete` | Sub-LLM | Parallel sub-queries |
+| `snipara_context_query` | Snipara | Semantic documentation search |
+| `snipara_search` | Snipara | Regex documentation search |
+| `snipara_shared_context` | Snipara | Team guidelines and best practices |
+| `snipara_remember` | Snipara | Store memories (when `memory_enabled`) |
+| `snipara_recall` | Snipara | Recall memories (when `memory_enabled`) |
+| `snipara_sub_complete` | Sub-LLM | Delegate focused sub-problems |
+| `snipara_batch_complete` | Sub-LLM | Parallel sub-queries |
 | **`FINAL`** | Terminal | Return natural language answer |
 | **`FINAL_VAR`** | Terminal | Return computed REPL variable |
 
 ## Exception Hierarchy
 
 ```python
-from rlm.core.exceptions import (
+from snipara_sandbox.core.exceptions import (
     AgentError,                    # Base agent exception
     AgentIterationLimitExceeded,   # Iteration limit hit
     AgentCostLimitExceeded,        # Cost limit hit

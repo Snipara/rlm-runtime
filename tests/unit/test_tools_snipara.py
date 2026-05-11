@@ -38,13 +38,13 @@ class TestSniparaClientFromConfig:
 
             config = RLMConfig()
             # Manually set since env override won't be present
-            config.snipara_api_key = "rlm_test_key"
+            config.snipara_api_key = "snp-test_key"
             config.snipara_project_slug = "test-project"
 
             client = SniparaClient.from_config(config)
 
             assert client is not None
-            assert client._auth_header == "rlm_test_key"
+            assert client._auth_header == "snp-test_key"
             assert client._project_slug == "test-project"
 
     def test_returns_none_when_no_auth(self):
@@ -276,12 +276,17 @@ class TestGetNativeSniparaTools:
     def mock_client(self):
         return MagicMock(spec=SniparaClient)
 
-    def test_returns_5_tools_without_memory(self, mock_client):
-        """Should return Tier 1 + Tier 3 tools when memory disabled."""
+    def test_returns_tools_without_memory(self, mock_client):
+        """Should return Snipara tools plus legacy aliases when memory disabled."""
         tools = get_native_snipara_tools(mock_client, memory_enabled=False)
-        assert len(tools) == 5
+        assert len(tools) == 10
         names = {t.name for t in tools}
         assert names == {
+            "snipara_context_query",
+            "snipara_search",
+            "snipara_sections",
+            "snipara_read",
+            "snipara_shared_context",
             "rlm_context_query",
             "rlm_search",
             "rlm_sections",
@@ -289,15 +294,30 @@ class TestGetNativeSniparaTools:
             "rlm_shared_context",
         }
 
-    def test_returns_9_tools_with_memory(self, mock_client):
-        """Should return all 9 tools when memory enabled."""
+    def test_returns_tools_with_memory(self, mock_client):
+        """Should return all Snipara memory tools plus legacy aliases."""
         tools = get_native_snipara_tools(mock_client, memory_enabled=True)
-        assert len(tools) == 9
+        assert len(tools) == 18
         names = {t.name for t in tools}
+        assert "snipara_remember" in names
+        assert "snipara_recall" in names
+        assert "snipara_memories" in names
+        assert "snipara_forget" in names
         assert "rlm_remember" in names
         assert "rlm_recall" in names
         assert "rlm_memories" in names
         assert "rlm_forget" in names
+
+    def test_can_omit_legacy_aliases(self, mock_client):
+        """Should support Snipara-only registration."""
+        tools = get_native_snipara_tools(mock_client, include_legacy_aliases=False)
+        assert {t.name for t in tools} == {
+            "snipara_context_query",
+            "snipara_search",
+            "snipara_sections",
+            "snipara_read",
+            "snipara_shared_context",
+        }
 
     def test_all_are_tool_instances(self, mock_client):
         """All returned items should be Tool instances with required fields."""
@@ -348,7 +368,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_context_query_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_context_query")
+        tool = self._get_tool(tools, "snipara_context_query")
 
         await tool.execute(query="What is RLM?")
 
@@ -366,7 +386,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_context_query_custom_params(self, mock_client):
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_context_query")
+        tool = self._get_tool(tools, "snipara_context_query")
 
         await tool.execute(
             query="test",
@@ -385,7 +405,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_search_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_search")
+        tool = self._get_tool(tools, "snipara_search")
 
         await tool.execute(pattern="error.*handling")
 
@@ -397,7 +417,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_sections_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_sections")
+        tool = self._get_tool(tools, "snipara_sections")
 
         await tool.execute(filter="API", limit=10)
 
@@ -409,7 +429,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_read_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_read")
+        tool = self._get_tool(tools, "snipara_read")
 
         await tool.execute(start_line=10, end_line=20)
 
@@ -421,7 +441,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_shared_context_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_shared_context")
+        tool = self._get_tool(tools, "snipara_shared_context")
 
         await tool.execute(categories=["MANDATORY"], max_tokens=2000)
 
@@ -437,7 +457,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_remember_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client, memory_enabled=True)
-        tool = self._get_tool(tools, "rlm_remember")
+        tool = self._get_tool(tools, "snipara_remember")
 
         await tool.execute(content="User prefers dark mode", type="preference")
 
@@ -449,7 +469,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_recall_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client, memory_enabled=True)
-        tool = self._get_tool(tools, "rlm_recall")
+        tool = self._get_tool(tools, "snipara_recall")
 
         await tool.execute(query="dark mode", limit=3)
 
@@ -461,7 +481,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_memories_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client, memory_enabled=True)
-        tool = self._get_tool(tools, "rlm_memories")
+        tool = self._get_tool(tools, "snipara_memories")
 
         await tool.execute(type="fact", search="auth")
 
@@ -473,7 +493,7 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_forget_forwards_args(self, mock_client):
         tools = get_native_snipara_tools(mock_client, memory_enabled=True)
-        tool = self._get_tool(tools, "rlm_forget")
+        tool = self._get_tool(tools, "snipara_forget")
 
         await tool.execute(memory_id="abc123")
 
@@ -492,7 +512,7 @@ class TestToolExecution:
             )
         )
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_context_query")
+        tool = self._get_tool(tools, "snipara_context_query")
 
         with pytest.raises(SniparaAPIError):
             await tool.execute(query="test")
@@ -504,7 +524,7 @@ class TestToolExecution:
         mock_client.call_tool = AsyncMock(return_value=expected)
 
         tools = get_native_snipara_tools(mock_client)
-        tool = self._get_tool(tools, "rlm_context_query")
+        tool = self._get_tool(tools, "snipara_context_query")
 
         result = await tool.execute(query="auth")
         assert result == expected

@@ -95,7 +95,7 @@ def get_sub_llm_tools(
         parent_tokens_used: Tokens already used by the parent
 
     Returns:
-        List of Tool instances for rlm_sub_complete and rlm_batch_complete
+        List of Tool instances for Snipara sub-call tools plus legacy aliases.
     """
 
     async def rlm_sub_complete(
@@ -124,7 +124,9 @@ def get_sub_llm_tools(
         if context_query and system is None:
             system = ""
         if context_query:
-            snipara_tool = rlm.tool_registry.get("rlm_context_query")
+            snipara_tool = rlm.tool_registry.get("snipara_context_query") or rlm.tool_registry.get(
+                "rlm_context_query"
+            )
             if snipara_tool:
                 try:
                     ctx_result = await snipara_tool.execute(
@@ -242,7 +244,7 @@ def get_sub_llm_tools(
 
     tools = [
         Tool(
-            name="rlm_sub_complete",
+            name="snipara_sub_complete",
             description=(
                 "Delegate a focused sub-problem to a fresh LLM call with its own "
                 "context window and budget. Use this when the current task can be "
@@ -273,7 +275,7 @@ def get_sub_llm_tools(
             handler=rlm_sub_complete,
         ),
         Tool(
-            name="rlm_batch_complete",
+            name="snipara_batch_complete",
             description=(
                 "Execute multiple sub-LLM calls in parallel. Each query gets an "
                 "equal share of the total budget. Use for independent sub-tasks "
@@ -309,4 +311,19 @@ def get_sub_llm_tools(
         ),
     ]
 
-    return tools
+    legacy_tools = [
+        Tool(
+            name="rlm_sub_complete",
+            description="Legacy alias for snipara_sub_complete.",
+            parameters=tools[0].parameters,
+            handler=tools[0].handler,
+        ),
+        Tool(
+            name="rlm_batch_complete",
+            description="Legacy alias for snipara_batch_complete.",
+            parameters=tools[1].parameters,
+            handler=tools[1].handler,
+        ),
+    ]
+
+    return [*tools, *legacy_tools]

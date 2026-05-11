@@ -2,9 +2,9 @@
 
 ## Status: Implemented
 
-Sub-LLM Orchestration enables rlm-runtime to make **recursive LLM calls within a single completion**, allowing the model to spawn focused sub-queries that each get their own context window, depth budget, and token limit.
+Sub-LLM Orchestration enables snipara-sandbox to make **recursive LLM calls within a single completion**, allowing the model to spawn focused sub-queries that each get their own context window, depth budget, and token limit.
 
-The key insight from Alex Zhang's RLM paper: a model working on a complex task should be able to delegate sub-problems to fresh LLM calls with targeted context, rather than trying to hold everything in a single conversation.
+The key insight from Alex Zhang's Snipara Sandbox paper: a model working on a complex task should be able to delegate sub-problems to fresh LLM calls with targeted context, rather than trying to hold everything in a single conversation.
 
 ## Architecture
 
@@ -21,8 +21,8 @@ The key insight from Alex Zhang's RLM paper: a model working on a complex task s
 │  Model decides: "I need to understand auth and billing          │
 │  separately, then synthesize."                                   │
 │                                                                  │
-│  Calls: rlm_sub_complete("How does authentication work?")       │
-│  Calls: rlm_sub_complete("How does billing work?")              │
+│  Calls: snipara_sub_complete("How does authentication work?")       │
+│  Calls: snipara_sub_complete("How does billing work?")              │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │ Sub-LLM Call (depth=1) - Auth                            │   │
@@ -57,14 +57,14 @@ The key insight from Alex Zhang's RLM paper: a model working on a complex task s
 
 ### Tools
 
-#### `rlm_sub_complete`
+#### `snipara_sub_complete`
 
 Spawn a sub-LLM call with its own context window and budget.
 
 ```python
 # Tool schema
 {
-    "name": "rlm_sub_complete",
+    "name": "snipara_sub_complete",
     "parameters": {
         "query": "string (required) - The focused question",
         "max_tokens": "integer (default: 4000) - Token budget",
@@ -76,7 +76,7 @@ Spawn a sub-LLM call with its own context window and budget.
 
 **Budget inheritance**: The sub-call gets `min(requested_tokens, parent_remaining * budget_inheritance)` where `budget_inheritance` defaults to `0.5` (50%).
 
-**Auto-context injection**: When `context_query` is set and a Snipara `rlm_context_query` tool is registered, the sub-call automatically fetches relevant documentation and injects it into the system prompt.
+**Auto-context injection**: When `context_query` is set and a Snipara `snipara_context_query` tool is registered, the sub-call automatically fetches relevant documentation and injects it into the system prompt.
 
 **Return value**:
 ```json
@@ -88,14 +88,14 @@ Spawn a sub-LLM call with its own context window and budget.
 }
 ```
 
-#### `rlm_batch_complete`
+#### `snipara_batch_complete`
 
 Spawn multiple sub-LLM calls in parallel with a shared budget.
 
 ```python
 # Tool schema
 {
-    "name": "rlm_batch_complete",
+    "name": "snipara_batch_complete",
     "parameters": {
         "queries": [
             {"query": "How does auth work?", "context_query": "authentication"},
@@ -197,13 +197,13 @@ class TrajectoryEvent:
 ### Python API
 
 ```python
-from rlm.core.orchestrator import RLM
-from rlm.core.types import CompletionOptions
+from snipara_sandbox import SniparaSandbox
+from snipara_sandbox.core.types import CompletionOptions
 
-rlm = RLM(model="gpt-4o-mini")
+sandbox = SniparaSandbox(model="gpt-4o-mini")
 
 # Sub-calls are enabled by default
-result = await rlm.completion(
+result = await sandbox.completion(
     "Analyze this codebase architecture",
     options=CompletionOptions(
         max_depth=3,          # Sub-calls can recurse 3 levels
@@ -215,8 +215,8 @@ result = await rlm.completion(
 ### Configuration File
 
 ```toml
-# rlm.toml
-[rlm]
+# snipara-sandbox.toml
+[snipara_sandbox]
 sub_calls_enabled = true
 sub_calls_max_per_turn = 5
 sub_calls_budget_inheritance = 0.5
@@ -226,27 +226,27 @@ sub_calls_max_cost_per_session = 1.0
 ### Environment Variables
 
 ```bash
-RLM_SUB_CALLS_ENABLED=true
-RLM_SUB_CALLS_MAX_PER_TURN=5
-RLM_SUB_CALLS_BUDGET_INHERITANCE=0.5
-RLM_SUB_CALLS_MAX_COST_PER_SESSION=1.0
+SNIPARA_SANDBOX_SUB_CALLS_ENABLED=true
+SNIPARA_SANDBOX_SUB_CALLS_MAX_PER_TURN=5
+SNIPARA_SANDBOX_SUB_CALLS_BUDGET_INHERITANCE=0.5
+SNIPARA_SANDBOX_SUB_CALLS_MAX_COST_PER_SESSION=1.0
 ```
 
 ### CLI Flags
 
 ```bash
 # Enable/disable sub-calls
-rlm run "Complex query" --sub-calls        # Enabled (default)
-rlm run "Simple query" --no-sub-calls      # Disabled
+snipara-sandbox run "Complex query" --sub-calls        # Enabled (default)
+snipara-sandbox run "Simple query" --no-sub-calls      # Disabled
 
 # Control max sub-calls per turn
-rlm run "Query" --max-sub-calls 10
+snipara-sandbox run "Query" --max-sub-calls 10
 ```
 
 ## Exception Hierarchy
 
 ```python
-from rlm.core.exceptions import (
+from snipara_sandbox.core.exceptions import (
     SubCallBudgetExhausted,   # Per-turn sub-call limit reached
     SubCallDepthExceeded,     # Max recursion depth exceeded
     SubCallCostExceeded,      # Session cost cap exceeded
@@ -271,29 +271,29 @@ These exceptions are caught internally and returned as error messages to the LLM
 
 - Budget inheritance math (50% of remaining)
 - `SubCallLimits` enforcement (max_per_turn, session cost cap)
-- Mock `rlm.completion()` to verify constrained options
+- Mock `sandbox.completion()` to verify constrained options
 - Event merging into parent trajectory with adjusted depth
 - Batch parallel execution with budget split
 - Depth limit prevents further sub-calls at max depth
-- Snipara auto-context injection (mock `rlm_context_query` tool)
+- Snipara auto-context injection (mock `snipara_context_query` tool)
 - Sub-call tracking (calls_this_turn, session_cost accumulation)
-- Error handling for tool creation without RLM instance
+- Error handling for tool creation without Snipara Sandbox instance
 
 ## Relationship to Snipara
 
-rlm-runtime handles the LLM orchestration. Snipara provides the context:
+snipara-sandbox handles the LLM orchestration. Snipara provides the context:
 
 ```
-rlm-runtime (client-side, user's keys)
+snipara-sandbox (client-side, user's keys)
 ├── Manages sub-LLM calls
 ├── Enforces budgets and depth limits
 ├── Logs trajectories
 └── Calls Snipara for context (when context_query is set)
     └── Snipara MCP Server
-        ├── rlm_context_query → ranked documentation sections
-        ├── rlm_search → regex pattern search
-        ├── rlm_remember → store memories
-        └── rlm_recall → semantic memory recall
+        ├── snipara_context_query → ranked documentation sections
+        ├── snipara_search → regex pattern search
+        ├── snipara_remember → store memories
+        └── snipara_recall → semantic memory recall
 ```
 
 Snipara never runs LLM inference. It only provides optimized documentation context that sub-LLM calls consume.

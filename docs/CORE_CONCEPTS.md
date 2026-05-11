@@ -1,6 +1,6 @@
 # Core Concepts and Glossary
 
-This document defines the core concepts and terminology used in RLM Runtime. Understanding these concepts is essential for effectively using and extending the framework.
+This document defines the core concepts and terminology used in Snipara Sandbox. Understanding these concepts is essential for effectively using and extending the framework.
 
 ## Table of Contents
 
@@ -14,9 +14,9 @@ This document defines the core concepts and terminology used in RLM Runtime. Und
 
 ## Core Concepts
 
-### RLM (Recursive Language Model)
+### Snipara Sandbox (Recursive Language Model)
 
-RLM stands for Recursive Language Model. Unlike traditional LLM usage where a single prompt-response cycle is used, RLM enables LLMs to:
+Snipara Sandbox stands for Recursive Language Model. Unlike traditional LLM usage where a single prompt-response cycle is used, Snipara Sandbox enables LLMs to:
 
 - **Decompose** complex tasks into smaller sub-tasks
 - **Execute** real code in sandboxed environments
@@ -27,7 +27,7 @@ The "recursive" aspect means the LLM can make tool calls, receive results, and m
 
 ### Orchestration
 
-Orchestration refers to the coordination of LLM calls, tool executions, and result aggregation. The RLM Orchestrator manages:
+Orchestration refers to the coordination of LLM calls, tool executions, and result aggregation. The Snipara Sandbox Orchestrator manages:
 
 - **Recursion depth** - Maximum number of nested calls
 - **Token budgets** - Token limits per completion
@@ -36,7 +36,7 @@ Orchestration refers to the coordination of LLM calls, tool executions, and resu
 
 ### Trajectory
 
-A trajectory is the complete record of an RLM execution, including:
+A trajectory is the complete record of an Snipara Sandbox execution, including:
 
 - All prompts and responses
 - Tool calls and results
@@ -60,11 +60,11 @@ Context optimization (via Snipara) is the process of intelligently selecting and
 
 ### Agent
 
-An autonomous entity that can plan, execute, and learn. In RLM, agents use the `Agent` class to run iterative task completion with guardrails and learning capabilities.
+An autonomous entity that can plan, execute, and learn. In Snipara Sandbox, agents use the `Agent` class to run iterative task completion with guardrails and learning capabilities.
 
 ### Backend
 
-The LLM provider abstraction. RLM supports multiple backends:
+The LLM provider abstraction. Snipara Sandbox supports multiple backends:
 
 - **LiteLLM** - Default backend supporting 100+ providers
 - **OpenAI** - Direct OpenAI API access
@@ -72,7 +72,7 @@ The LLM provider abstraction. RLM supports multiple backends:
 
 ### Completion
 
-A completion is a single LLM response generation. RLM completions can include tool calls, which trigger recursive execution.
+A completion is a single LLM response generation. Snipara Sandbox completions can include tool calls, which trigger recursive execution.
 
 ### Context
 
@@ -98,21 +98,21 @@ A predefined set of resource limits for REPL execution:
 
 Snipara's memory system allows LLMs to store and recall information across sessions:
 
-- **rlm_remember** - Store a memory
-- **rlm_recall** - Retrieve memories semantically
-- **rlm_memories** - List stored memories
-- **rlm_forget** - Delete memories
+- **snipara_remember** - Store a memory
+- **snipara_recall** - Retrieve memories semantically
+- **snipara_memories** - List stored memories
+- **snipara_forget** - Delete memories
 
 Memory types: `fact`, `decision`, `learning`, `preference`, `todo`, `context`
 Memory scopes: `agent`, `project`, `team`, `user`
 
 ### MCP (Model Context Protocol)
 
-MCP is a protocol for providing tools to LLMs. RLM includes an MCP server that exposes sandboxed Python execution to Claude Desktop/Code.
+MCP is a protocol for providing tools to LLMs. Snipara Sandbox includes an MCP server that exposes sandboxed Python execution to Claude Desktop/Code.
 
 ### REPL
 
-Read-Eval-Print Loop. RLM provides multiple REPL environments:
+Read-Eval-Print Loop. Snipara Sandbox provides multiple REPL environments:
 
 - **Local** - RestrictedPython sandbox
 - **Docker** - Full container isolation
@@ -120,7 +120,7 @@ Read-Eval-Print Loop. RLM provides multiple REPL environments:
 
 ### Sandbox
 
-A sandbox is an isolated execution environment that restricts what code can do. RLM sandboxes prevent:
+A sandbox is an isolated execution environment that restricts what code can do. Snipara Sandbox sandboxes prevent:
 
 - Network access (except Docker)
 - File system access (configurable)
@@ -219,10 +219,10 @@ Tools for retrieving documentation:
 
 | Tool | Description |
 |------|-------------|
-| `rlm_context_query` | Semantic/keyword/hybrid search |
-| `rlm_search` | Regex pattern search |
-| `rlm_sections` | List indexed sections |
-| `rlm_read` | Read specific lines |
+| `snipara_context_query` | Semantic/keyword/hybrid search |
+| `snipara_search` | Regex pattern search |
+| `snipara_sections` | List indexed sections |
+| `snipara_read` | Read specific lines |
 
 ### Memory Tools (Snipara Tier 2)
 
@@ -230,10 +230,10 @@ Tools for persistent memory (requires `memory_enabled=True`):
 
 | Tool | Description |
 |------|-------------|
-| `rlm_remember` | Store a memory |
-| `rlm_recall` | Recall memories semantically |
-| `rlm_memories` | List stored memories |
-| `rlm_forget` | Delete memories |
+| `snipara_remember` | Store a memory |
+| `snipara_recall` | Recall memories semantically |
+| `snipara_memories` | List stored memories |
+| `snipara_forget` | Delete memories |
 
 ### Advanced Tools (Snipara Tier 3)
 
@@ -241,7 +241,7 @@ Tools for team context:
 
 | Tool | Description |
 |------|-------------|
-| `rlm_shared_context` | Get merged team documentation |
+| `snipara_shared_context` | Get merged team documentation |
 
 ---
 
@@ -286,13 +286,13 @@ Errors from LLM providers:
 
 ## Configuration Terms
 
-### Config File (rlm.toml)
+### Config File (snipara-sandbox.toml)
 
-A TOML configuration file that stores RLM settings. Located in the project root or specified via CLI.
+A TOML configuration file that stores Snipara Sandbox settings. Located in the project root or specified via CLI.
 
 ### Environment Variables
 
-Configuration can also be set via environment variables with the `RLM_` prefix (e.g., `RLM_MODEL`, `RLM_MAX_DEPTH`).
+Configuration can also be set via environment variables with the `SNIPARA_SANDBOX_` prefix (e.g., `SNIPARA_SANDBOX_MODEL`, `SNIPARA_SANDBOX_MAX_DEPTH`). Legacy `RLM_` variables are still accepted.
 
 ### Execution Profile
 

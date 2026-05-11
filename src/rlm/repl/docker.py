@@ -92,7 +92,7 @@ class DockerREPL(BaseREPL):
         if not DOCKER_AVAILABLE:
             raise ImportError(
                 "Docker support requires 'docker' package. "
-                "Install with: pip install rlm-runtime[docker]"
+                "Install with: pip install snipara-sandbox[docker]"
             )
 
         self.image = image
