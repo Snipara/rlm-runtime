@@ -19,7 +19,7 @@ Add to your Claude Code MCP settings:
 ```json
 {
   "mcpServers": {
-    "snipara-sandbox": {
+    "SniparaSandbox": {
       "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     }
@@ -34,7 +34,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "snipara-sandbox": {
+    "SniparaSandbox": {
       "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     }
@@ -169,7 +169,7 @@ run snipara-mcp as a separate server alongside snipara-sandbox:
 ```json
 {
   "mcpServers": {
-    "snipara-sandbox": {
+    "SniparaSandbox": {
       "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     },
@@ -187,7 +187,7 @@ snipara-mcp-status     # Check status
 ```
 
 This provides:
-- **snipara-sandbox**: Code execution sandbox (no API keys)
+- **SniparaSandbox**: Code execution sandbox (no API keys)
 - **snipara-mcp**: Context retrieval (OAuth authentication)
 
 See [Snipara Integration](snipara.md) for full details on tools and auth.

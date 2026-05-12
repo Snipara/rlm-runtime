@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Renamed the MCP server display identity to `SniparaSandbox`, so client-generated function prefixes migrate from legacy RLM naming to `SniparaSandbox-*`.
+
 ## [2.2.0] - 2026-05-11
 
 ### Changed

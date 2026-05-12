@@ -967,7 +967,7 @@ def mcp_serve() -> None:
     For Claude Desktop (~/.claude/claude_desktop_config.json):
     {
       "mcpServers": {
-        "snipara-sandbox": {
+        "SniparaSandbox": {
           "command": "snipara-sandbox",
           "args": ["mcp-serve"]
         }
@@ -977,7 +977,7 @@ def mcp_serve() -> None:
     For Claude Code (~/.claude/claude_code_config.json):
     {
       "mcpServers": {
-        "snipara-sandbox": {
+        "SniparaSandbox": {
           "command": "snipara-sandbox",
           "args": ["mcp-serve"]
         }

@@ -33,9 +33,9 @@ class TestCreateServer:
         assert isinstance(server, Server)
 
     def test_server_has_correct_name(self):
-        """Server should have the name 'snipara-sandbox'."""
+        """Server should have the name 'SniparaSandbox'."""
         server = create_server()
-        assert server.name == "snipara-sandbox"
+        assert server.name == "SniparaSandbox"
 
 
 class TestExecutePython:
@@ -271,7 +271,7 @@ class TestServerCallTool:
         # Test that unknown tool returns an error via _call_tool behavior
         # Since we can't easily invoke the decorated function, let's verify
         # that the server is created correctly and has the tool handlers
-        assert server.name == "snipara-sandbox"
+        assert server.name == "SniparaSandbox"
 
 
 class TestListTools:
@@ -282,7 +282,7 @@ class TestListTools:
         server = create_server()
 
         # Verify server is created correctly
-        assert server.name == "snipara-sandbox"
+        assert server.name == "SniparaSandbox"
 
 
 class TestExecutePythonEdgeCases:

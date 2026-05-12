@@ -226,7 +226,7 @@ class AgentManager:
 
 def create_server() -> Server:
     """Create and configure the MCP server with code sandbox tools."""
-    server = Server("snipara-sandbox")
+    server = Server("SniparaSandbox")
 
     # Load config to get trust_level
     try:

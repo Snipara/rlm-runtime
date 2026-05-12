@@ -202,7 +202,7 @@ Example MCP configuration:
 ```json
 {
   "mcpServers": {
-    "snipara-sandbox": {
+    "SniparaSandbox": {
       "command": "snipara-sandbox",
       "args": ["mcp-serve"]
     }
